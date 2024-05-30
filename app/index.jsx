@@ -1,116 +1,86 @@
-import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Image, TextInput, TouchableOpacity, Modal, Alert, Pressable } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { StyleSheet, ScrollView, Text, View, Image, TouchableOpacity, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Link, router } from 'expo-router';
+import React, { useState } from 'react';
+
+import { images } from '../constants'
+import { icons } from '../constants'
 
 export default function App() {
-    const [userame, setUsername] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [modalVisible, setModalVisible] = useState(false);
-    const router = useRouter();
-  return (
-    /** Log in Page */
-    <View style={styles.container}>
-      <StatusBar style="auto"/>
-      <Image style={styles.imageLogo} source = {require("../assets/geomap-title_b.png")}/>
-      
-      <View style={styles.inputView}>
-        <TextInput style={styles.TextInput} placeholder='Username' onChangeText={(userame => setUsername(userame))} />
-      </View>
-      <View style={styles.inputView}>
-        <TextInput style={styles.TextInput} placeholder='Password' secureTextEntry={true} onChangeText={(password => setPassword(password))} />
-      </View>
 
-      <TouchableOpacity>
-          <Text style={styles.forgotButton}>Forgot Password?</Text>
-      </TouchableOpacity>
+    const submit = () => {
+        router.push("map")
+    }
 
-        <TouchableOpacity style={styles.loginButton} onPress={() => {router.push("/Map-Page")}}>
-          <Text style={styles.loginText}>Log in</Text>
-        </TouchableOpacity>
+    const [showPassword, setshowPassword] = useState(false)
 
-        <TouchableOpacity style={styles.signupButton} onPress={() => {router.push("/selectType")}}>
-          <Text style={styles.signupText}>Sign up</Text>
-        </TouchableOpacity>
-    </View>
-  );
+    return (
+        <SafeAreaView className="bg-primary h-full">
+            <ScrollView>
+                <View className="w-full justify-center items-center min-h-[100vh] px-4">
+                    <View className="pb-2">
+                        <Image 
+                            source={images.title_w}
+                            className="w-[295px] h-[74px]"
+                            resizeMode='contain'
+                        />
+                    </View>
+                    <Text className="text-2xl text-white text-semibold mt-10 font-psemibold" style={{ paddingBottom: 25 }}>Log in to GEOMAP</Text>
+
+                    <View className="space-y-2 px-4 w-full h-16 border-3 border-red bg-white focus:border-black rounded-2xl items-center flex-row">
+                        <TextInput
+                            className="flex-1 text-md font-pmedium text-primary"
+                            placeholder='Username'
+                            placeholderTextColor='#CDCDE0'
+                            onChangeText={(username => setUsername(username))}>
+                        </TextInput>
+                    </View>
+
+                    <View style={{ paddingBottom: 30 }}></View>
+                    <View className="space-y-2 px-4 w-full h-16 border-3 border-red bg-white focus:border-black rounded-2xl items-center flex-row">
+                        <TextInput
+                            className="flex-1 text-md font-pmedium text-primary"
+                            placeholder='Password'
+                            placeholderTextColor='#CDCDE0'
+                            secureTextEntry={!showPassword}
+                            onChangeText={(password => setPassword(password))}>
+                        </TextInput>
+                        <TouchableOpacity className="pb-2" onPress={() => setshowPassword(!showPassword)}>
+                            <Image 
+                                tintColor="#57b378"
+                                source={!showPassword ? icons.eye : icons.eyeHide}
+                                className="w-6 h-6"
+                                resizeMode='contain'
+                            />
+                        </TouchableOpacity>
+                    </View>
+
+                    <TouchableOpacity className="w-2/3 mt-5 h-12" style={styles.loginButton} onPress={submit}>
+                        <Text className="text-primary font-psemibold text-2xl">LOGIN</Text>
+                    </TouchableOpacity>
+
+                    <View className="justify-center pt-3 flex-row gap-1">
+                        <Link href="/signup-choose">
+                            <Text className="text-md text-white font-pregular">Don't have account?</Text>
+                            <Text className="text-md font-psemibold text-secondary">{" "}Sign Up</Text>
+                        </Link>
+                    </View>
+                </View>
+            </ScrollView>
+            <StatusBar backgroundColor='#57b378' style={'light'} />
+        </SafeAreaView>
+    );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  imageLogo :{
-    height: 75,
-    width: 300,
-    marginBottom: 40
-  },
-
-  inputView: {
-    borderRadius: 30,
-    width: "70%",
-    height: 45, 
-    marginBottom: 10,
-    backgroundColor: "#efefef",
-    alignItems: "center"
-  },
-
-  TextInput: {
-    height: 50,
-    flex: 1,
-    padding: 10,
-    alignItems: "center"
-  },
-
-  forgotButton: {
-    height: 30,
-    marginBottom: 30
-  },
-
-  loginButton: {
-    width: "50%",
-    borderRadius: 25,
-    height: 50,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 20,
-    backgroundColor: "#57b378"
-  },
-
-  loginText: {
-    color: "white"
-  },
-
-  signupButton: {
-    width: "50%",
-    borderRadius: 25,
-    height: 50,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 20,
-    backgroundColor: "#57b378"
-  },
-   
-  signupText: {
-    color: "white"
-  },
-
-  modalView: {
-    margin: 30,
-    backgroundColor: 'white',
-    padding: 30,
-    alignItems: 'center',
-    shadowColor: 'black',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 1,
-    shadowRadius: 5,
-    elevation: 6
-  },
-});
+    loginButton: {
+        borderRadius: 25,
+        alignItems: "center",
+        justifyContent: "center",
+        marginTop: 20,
+        backgroundColor: "white"
+    }
+})
