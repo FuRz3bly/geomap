@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StyleSheet, ScrollView, View, Text, Image, TouchableOpacity } from 'react-native';
+import { router } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 
 import { icons } from '../../../constants'
@@ -44,7 +45,7 @@ export default function SignupI() {
             <Text className="text-lg text-primary mt-2 mb-5 font-psemibold">As a Community User</Text>
           </View>
           <View className="bg-primary w-full" style={{paddingVertical: 15, paddingHorizontal: 10}}>
-            <Text className="flex-1 text-md font-psemibold text-xl text-white pb-3 pl-2">II. Identity Authentication</Text>
+            <Text className="text-md font-psemibold text-xl text-white pb-3 pl-2">II. Identity Authentication</Text>
                 {image === null ? (
                   <TouchableOpacity className="w-full" onPress={pickImage}>
                     <View className="bg-white h-20 items-center justify-center flex-row rounded-xl">
@@ -67,7 +68,7 @@ export default function SignupI() {
                   <Text className="font-pmedium text-primary">in order to use our Service.</Text>
               </TouchableOpacity>
 
-                  <TouchableOpacity className="w-4/5 mt-5 h-12" style={styles.createButton} >
+                  <TouchableOpacity className="w-4/5 mt-5 h-12" style={styles.createButton} onPress={() => {router.push("community/signup-verification")}}>
                     <Text className="text-white font-psemibold text-xl">CREATE MY ACCOUNT</Text>
                   </TouchableOpacity>
               

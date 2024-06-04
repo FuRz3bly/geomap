@@ -6,17 +6,13 @@ import { router } from 'expo-router'
 import { images } from '../../constants'
 
 const SignUpC = () => {
-    const [type, setType] = useState('')
 
     const community = () => {
-        setType('community')
-        console.log('User Type:', type)
         router.push("community/signup-personal")
     }
 
     const responder = () => {
-        setType('responder')
-        console.log('User Type:', type)
+        router.push("responder/signup-personal")
     }
 
   return (

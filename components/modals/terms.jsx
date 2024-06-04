@@ -20,7 +20,7 @@ const Terms = ({ visible, onClose }) => {
       visible={visible}
       onRequestClose={onClose}
     >
-    <SafeAreaView className="bg-white h-full pt-6">
+    <SafeAreaView className="bg-white h-full w-full pt-6">
 
         <View className="top-2 border-primary-100 border-b-2 items-center pb-4">
           <Text className="text-3xl font-pbold text-primary">Terms and Conditions</Text>
@@ -29,20 +29,9 @@ const Terms = ({ visible, onClose }) => {
         {/* Title: Terms and Conditions */}
         <View className="px-2 pb-2">
           {/* Description */}
-          <Text className="text-md font-pregular text-black pt-5 pr-36">Our Terms and Conditions were
-            {"\n"}last updated on{' '}<Text className="font-psemibold text-primary">May 09, 2024</Text>.
-            {"\n"}Read the following carefully {"\n"}before using<Text className="font-psemibold text-primary">Our Service</Text>.
+          <Text className="text-md font-pregular text-black pt-5 pr-2">Our Terms and Conditions were last updated on{' '}<Text className="font-psemibold text-primary">May 09, 2024</Text>.
+            {"\n"}Read the following carefully before using{" "}<Text className="font-psemibold text-primary">Our Service</Text>.
           </Text>
-          <View className="absolute top-10 right-2 h-10 w-10 rounded-xl">
-            <TouchableOpacity onPress={onClose}>
-              <Image 
-                tintColor="#57b378"
-                source={icons.close}
-                className="w-10 h-10"
-                resizeMode='contain'
-              />
-            </TouchableOpacity>
-          </View>
         </View>
 
         {/* Text Container - Split into Two (Button Container and Terms Container) */}

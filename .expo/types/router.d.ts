@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { TextProps, GestureResponderEvent } from 'react-native';
 
 export namespace ExpoRouter {
-  type StaticRoutes = `/` | `/(auth)` | `/(tabs)` | `/_sitemap` | `/community/signup-image` | `/community/signup-personal` | `/community/signup-verification` | `/login` | `/map` | `/profile` | `/report` | `/signup-choose`;
+  type StaticRoutes = `/` | `/(auth)` | `/_sitemap` | `/community/signup-image` | `/community/signup-personal` | `/community/signup-verification` | `/home/about-us` | `/home/help` | `/home/map` | `/home/profile` | `/home/report/finish-report` | `/home/report/photo-report` | `/home/report/prelim-report` | `/home/settings` | `/login` | `/responder/signup-image` | `/responder/signup-personal` | `/responder/signup-verification` | `/signup-choose`;
   type DynamicRoutes<T extends string> = `/search/${SingleRoutePart<T>}`;
   type DynamicRouteTemplate = `/search/[query]`;
 
