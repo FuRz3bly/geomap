@@ -19,13 +19,42 @@ import menu from "../assets/icons/menu.png";
 import menuBack from "../assets/icons/menu-flip.png";
 import home from "../assets/icons/home.png";
 import help from "../assets/icons/help.png";
+import needHelp from "../assets/icons/need-help.png";
 import aboutUs from "../assets/icons/about-us.png";
 import settings from "../assets/icons/settings.png";
 import logOut from "../assets/icons/logout.png";
 import arrowD from "../assets/icons/arrow-down.png";
 import arrowU from "../assets/icons/arrow-up.png";
 import mapFocus from "../assets/icons/map-focus.png";
-import back from "../assets/icons/back-arrow.png"
+import back from "../assets/icons/back-arrow.png";
+import toggleOn from "../assets/icons/toggle-on.png";
+import toggleOff from "../assets/icons/toggle-off.png";
+
+import structuralFire from "../assets/icons/structural-fire.png";
+import vehicularFire from "../assets/icons/vehicular-fire.png";
+import explosion from "../assets/icons/explosion.png";
+import wildfire from "../assets/icons/wildfire.png";
+import gasleak from "../assets/icons/gasleak.png";
+
+import rescue from "../assets/icons/rescue.png";
+import industrialAccident from "../assets/icons/industrial-accident.png";
+import personalSafety from "../assets/icons/personal-safety.png";
+
+import theft from "../assets/icons/theft.png";
+import assault from "../assets/icons/assault.png";
+import vehicleCrash from "../assets/icons/vehicle-crash.png";
+import abuse from "../assets/icons/abuse.png";
+import publicDisturbance from "../assets/icons/public-disturbance.png";
+import murder from "../assets/icons/murder.png";
+
+import policeStation from "../assets/icons/police-station.png"
+import fireStation from "../assets/icons/fire-station.png"
+import government from "../assets/icons/government.png"
+import townHall from "../assets/icons/town-hall.png"
+import municipalHall from "../assets/icons/municipal-hall.png"
+
+import ambulance from "../assets/icons/ambulance.png"
+import fireTruck from "../assets/icons/fire-truck.png"
 
 export default {
   logo,
@@ -50,10 +79,34 @@ export default {
   menuBack,
   home,
   help,
+  needHelp,
   aboutUs,
   settings,
   logOut,
   arrowD,
   arrowU,
-  mapFocus
+  mapFocus,
+  structuralFire,
+  vehicularFire,
+  explosion,
+  wildfire,
+  gasleak,
+  rescue,
+  theft,
+  assault,
+  vehicleCrash,
+  abuse,
+  publicDisturbance,
+  murder,
+  industrialAccident,
+  personalSafety,
+  policeStation,
+  fireStation,
+  government,
+  townHall,
+  municipalHall,
+  ambulance,
+  fireTruck,
+  toggleOn,
+  toggleOff
 };

@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { StyleSheet, View, TouchableOpacity, Image, Text } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import fetchNearbyAmenities from '../../../components/fetchplaces';
 
 import { icons } from '../../../constants'
-import retroMapStyle from '../../../constants/mapStyles'
+import retroMapStyle  from '../../../constants/mapStyles'
 
 import Menu from '../../../components/modals/menu'
 
@@ -15,6 +16,61 @@ export default function Map() {
   const [errorMsg, setErrorMsg] = useState(null);
   const [showFilter, setshowFilter] = useState(false)
 
+  const [amenities, setAmenities] = useState([]);
+  const [region, setRegion] = useState({
+    latitude: 14.32212,
+    longitude: 120.77134,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
+  const mapRef = useRef(null);
+
+  const types = [
+    { query: 'fire_station', description: 'Fire Station' },
+    { query: 'police', description: 'Police Station' },
+    { query: 'government', description: 'Government Office' },
+    { query: 'townhall', description: 'Municipal/City Hall' },
+    { query: 'barangay_hall', description: 'Barangay Hall' },
+  ];
+
+  const getMarkerColor = (type) => {
+    switch (type) {
+      case 'Fire Station':
+        return 'tomato';
+      case 'Police Station':
+        return 'blue';
+      case 'Government Office':
+        return 'green';
+      case 'Townhall':
+        return 'tan';
+      case 'Municipal Hall':
+        return 'wheat';
+      case 'Barangay Hall':
+        return 'linen';
+      default:
+        return 'red'; // Default color
+    }
+  };
+
+  {/*const getMarkerIcon = (type) => {
+    switch (type) {
+      case 'Fire Station':
+        return icons.fireStation;
+      case 'Police Station':
+        return icons.policeStation;
+      case 'Government Office':
+        return icons.government;
+      case 'Townhall':
+        return icons.townHall;
+      case 'Municipal Hall':
+        return icons.municipalHall;
+      case 'Barangay Hall':
+        return icons.government;
+      default:
+        return null;
+    }
+  };
+*/}
   const [isModalVisible, setModalVisible] = useState(false)
   const toggleModal = () => {
     setModalVisible(!isModalVisible)
@@ -35,8 +91,30 @@ export default function Map() {
       let location = await Location.getCurrentPositionAsync({});
       setLocation(location.coords);
       {/*console.log('Current Location:', location)*/}
+      
     })();
   }, []);
+
+  useEffect(() => {
+    if (location) {
+      setRegion((prevRegion) => ({
+        ...prevRegion,
+        latitude: location.latitude,
+        longitude: location.longitude,
+      }));
+
+      const fetchData = async () => {
+        let fetchedAmenities = [];
+        for (const type of types) {
+          const results = await fetchNearbyAmenities(location.latitude, location.longitude, type);
+          fetchedAmenities = [...fetchedAmenities, ...results];
+        }
+        setAmenities(fetchedAmenities);
+      };
+
+      fetchData();
+    }
+  }, [location]);
 
   return (
     <SafeAreaView className="w-full h-full bg-red-500 items-center pt-20">
@@ -52,6 +130,7 @@ export default function Map() {
             latitudeDelta: 0.0922,
             longitudeDelta: 0.0421,
           }}
+          onRegionChangeComplete={(newRegion) => setRegion(newRegion)}
           showsUserLocation={true}
           showsMyLocationButton={true}
           showsBuildings={true}
@@ -66,6 +145,19 @@ export default function Map() {
               description='This was me'
             />
           )}
+          {amenities.map((amenity, index) => (
+          <Marker
+            key={index}
+            coordinate={{
+              latitude: amenity.lat,
+              longitude: amenity.lon,
+            }}
+            title={amenity.name}
+            description={amenity.type}
+            // image={getMarkerIcon(amenity.type)}
+            pinColor={getMarkerColor(amenity.type)}
+          />
+        ))}
         </MapView>
         <View className="absolute inset-0 top-0 bg-primary w-full h-28 justify-center items-center flex-row">
           <View className="w-1/2 items-center justify-center pt-8 pr-32">
