@@ -23,8 +23,25 @@ module.exports = {
           100: "#CDCDE0",
         },
         white: {
-          DEFAULT: "#fff"
+          DEFAULT: "#fff",
+          red: "#fff5f2"
         },
+        fire: {
+          DEFAULT: "#ff6426",
+          100: "#ff7a45",
+        },
+        police: {
+          DEFAULT: "#202691",
+          25: "#676eeb",
+          50: "#434ad1",
+          100: "#222678"
+        },
+        drrmo: {
+          DEFAULT: "#68d65c",
+          25: "#9fff94",
+          100: "#50bf43",
+          200: "#478a3f"
+        }
       },
       fontFamily: {
         pthin: ["Poppins-Thin", "sans-serif"],

@@ -36,9 +36,12 @@ import explosion from "../assets/icons/explosion.png";
 import wildfire from "../assets/icons/wildfire.png";
 import gasleak from "../assets/icons/gasleak.png";
 
+import searchRescue from "../assets/icons/search-rescue.png"
 import rescue from "../assets/icons/rescue.png";
 import industrialAccident from "../assets/icons/industrial-accident.png";
 import personalSafety from "../assets/icons/personal-safety.png";
+import massCasualty from "../assets/icons/mass-casualty.png";
+import disaster from "../assets/icons/disaster.png";
 
 import theft from "../assets/icons/theft.png";
 import assault from "../assets/icons/assault.png";
@@ -55,6 +58,11 @@ import municipalHall from "../assets/icons/municipal-hall.png"
 
 import ambulance from "../assets/icons/ambulance.png"
 import fireTruck from "../assets/icons/fire-truck.png"
+
+import camera from "../assets/icons/camera.png"
+import capture from "../assets/icons/capture.png"
+import flipCamera from "../assets/icons/flip-camera.png"
+import fullScreen from "../assets/icons/full-screen.png"
 
 export default {
   logo,
@@ -91,6 +99,7 @@ export default {
   explosion,
   wildfire,
   gasleak,
+  searchRescue,
   rescue,
   theft,
   assault,
@@ -100,6 +109,8 @@ export default {
   murder,
   industrialAccident,
   personalSafety,
+  massCasualty,
+  disaster,
   policeStation,
   fireStation,
   government,
@@ -108,5 +119,9 @@ export default {
   ambulance,
   fireTruck,
   toggleOn,
-  toggleOff
+  toggleOff,
+  camera,
+  capture,
+  flipCamera,
+  fullScreen
 };

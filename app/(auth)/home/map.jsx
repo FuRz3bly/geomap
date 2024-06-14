@@ -204,7 +204,7 @@ export default function Map() {
             
         </View>
         {/* Report Button */}
-        <View className="absolute inset-0 bottom-20 border-8 z-10 border-primary rounded-full">
+        <View className="absolute inset-0 bottom-20 border-8 z-10 border-primary bg-primary rounded-full">
           <TouchableOpacity onPress={handleReport}>
             <View className="rounded-full items-center bg-white p-5">
                 <Image 
