@@ -1,4 +1,4 @@
-import { StyleSheet, Text, TouchableOpacity, View, Image, Button, ScrollView } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Image, Button, ScrollView, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
@@ -14,11 +14,14 @@ const FinishReport = () => {
   // Asking for Camera Permission
   const [permission, requestPermission] = useCameraPermissions();
   // Asking for Location Permission
-  const [locationPermission, setLocationPermission] = useState(null);
+  const [locationPermission, setLocationPermission] = useState('granted');
   // Array of Photos
   const [photos, setPhotos] = useState([]);
+  // Preview Photo
+  const [previewPhoto, setPreviewPhoto] = useState(null)
   // Reference for CameraView
   const cameraRef = useRef(null);
+  const [activeCamera, setActiveCamera] = useState('camera1');
 
   // Data storage for Address
   const [currentAddress, setCurrentAddress] = useState('...');
@@ -35,6 +38,7 @@ const FinishReport = () => {
   const [cameraFullScreen, setCameraFullScreen] = useState(false)
   const toggleFullScreen = () => {
     setCameraFullScreen(!cameraFullScreen)
+    setActiveCamera('camera2')
   }
 
   const submitHandle = () => {
@@ -143,6 +147,14 @@ const FinishReport = () => {
       }
       {/* Setting the metadata and photos */}
       setPhotos([...photos, photoData]);
+      setPreviewPhoto(photoData)
+    } else {
+      // Display the warning alert
+      Alert.alert(
+        "Capture Limit Reached",
+        "The maximum number of images stored has been reached.",
+        [{ text: "OK" }]
+      );
     }
   };
 
@@ -152,43 +164,45 @@ const FinishReport = () => {
 
   return (
     <SafeAreaView className="bg-primary h-full w-full">
-      <View className="absolute inset-0">
-        <Terms visible={isModalVisible} onClose={toggleModal}></Terms>
-      </View>
-      {/* Back Button */}
-      <View className="absolute left-0 top-6 py-3 pl-2 z-20">
-        <TouchableOpacity onPress={backHandle}>
-          <View className="flex-row justify-center items-center">
-            <Image 
-                tintColor="#57b378"
-                source={icons.back}
-                className="w-6 h-6"
-                resizeMode='contain'
-            />
-            <Text className="text-xl text-primary font-pbold pt-1 pl-4">Back</Text>
+      {cameraFullScreen === false ? (
+        <View>
+          <View className="absolute inset-0">
+            <Terms visible={isModalVisible} onClose={toggleModal}></Terms>
           </View>
-        </TouchableOpacity>
-      </View>
+          {/* Back Button */}
+          <View className="absolute left-0 top-0 py-3 pl-2 z-20">
+            <TouchableOpacity onPress={backHandle}>
+              <View className="flex-row justify-center items-center">
+                <Image 
+                    tintColor="#57b378"
+                    source={icons.back}
+                    className="w-6 h-6"
+                    resizeMode='contain'
+                />
+                <Text className="text-xl text-primary font-pbold pt-1 pl-4">Back</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
 
-      {/* Title Container */}
-      <View className="absolute inset-x-0 top-7 h-[20%] w-full justify-center bg-white z-10 border-b-2 border-primary">
-        {/* Title */}
-        <View className="items-center">
-          <Text className="text-4xl text-primary text-semibold font-pbold pt-10 pb-3">SNAPSHOT{"  "}REPORT</Text>
-        </View>
-        <View className="absolute inset-0 left-6 top-32 bg-primary h-1 w-[88%] items-center"></View>
-        {/* Page Indicators */}
-        <View className="flex-row gap-40 items-center justify-center bottom-0">
-          <View className="bg-primary h-4 w-4 rounded-full justify-center items-center">
+          {/* Title Container */}
+          <View className="absolute inset-x-0 -top-8 h-[20%] w-full justify-center bg-white z-10 border-b-2 border-primary">
+            {/* Title */}
+            <View className="items-center">
+              <Text className="text-4xl text-primary text-semibold font-pbold pt-10 pb-2">SNAPSHOT{"  "}REPORT</Text>
+            </View>
+            <View className="absolute inset-0 left-6 top-36 bg-primary h-1 w-[88%] items-center"></View>
+            {/* Page Indicators */}
+            <View className="flex-row gap-40 items-center justify-center bottom-0">
+              <View className="bg-primary h-4 w-4 rounded-full justify-center items-center">
+              </View>
+              <View className="bg-white border-primary border-double border-4 h-4 w-4 rounded-full justify-center items-center">
+              </View>
+              <View className="bg-primary h-4 w-4 rounded-full justify-center items-center">
+              </View>
+            </View>
           </View>
-          <View className="bg-white border-primary border-double border-4 h-4 w-4 rounded-full justify-center items-center">
-          </View>
-          <View className="bg-primary h-4 w-4 rounded-full justify-center items-center">
-          </View>
-        </View>
-      </View>
 
-      <View className="pt-44 bg-white" />
+          <View className="pt-48 bg-white" />
         {/* Camera Container */}
         <View className="bg-white w-full h-full px-5">
           {/* Instructions */}
@@ -202,26 +216,98 @@ const FinishReport = () => {
 
           <View className="pt-2">
             {/* Camera View */}
-            <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
+              <View className="bg-white-100 h-[60%] w-full">
                 <TouchableOpacity onPress={toggleFullScreen}>
-                  <View className="justify-center items-center pt-48">
+                  <View className="justify-center items-center pt-40">
                     <Image 
                       tintColor="#ffffff"
-                      source={icons.fullScreen}
+                      source={icons.camera}
                       className="w-10 h-10"
                       resizeMode='contain'
                     />
-                    <Text className="font-pmedium text-sm text-center text-white pt-4">Press here to{"\n"}Full Screen</Text>
+                    <Text className="font-pmedium text-sm text-center text-white pt-4">Please press here to{"\n"}enable Camera</Text>
                   </View>
                 </TouchableOpacity>
-            </CameraView>
+              </View>
+
+            <View className="pl-2 pt-4">
+              <TouchableOpacity className="w-44 h-12 bottom-0 left-48 bg-primary items-center justify-center rounded-3xl mt-2" onPress={submitHandle}>
+                <Text className="text-white font-pbold text-xl pl-4">SUBMIT {"   >"}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <View className="pl-2 pt-2">
-            <TouchableOpacity className="w-44 h-12 bottom-0 left-48 bg-primary items-center justify-center rounded-3xl mt-2" onPress={submitHandle}>
-              <Text className="text-white font-pbold text-xl pl-4">SUBMIT {"   >"}</Text>
+        </View>
+        </View>
+      ) : (
+        <View>
+          {activeCamera === 'camera2' && (
+            <CameraView style={{ height: '93%', width: '100%' }} facing={facing} ref={cameraRef}>
+            {/* Camera Screen */}
+            </CameraView>
+          )}
+          {/* Capture Photo Button and Border */}
+          <View style={{ alignItems: 'center', position: 'absolute', bottom: '1%', left: '38%' }}>
+            <View className="w-24 h-24 justify-center items-center bg-primary rounded-full z-20">
+              <TouchableOpacity onPress={takePicture}>
+                <Image 
+                  tintColor={photos.length < 3 ? "#ffffff" : '#b5ffd0'}
+                  source={icons.capture}
+                  className="w-16 h-16"
+                  resizeMode='contain'
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+          {/* Flip Camera Button and Border */}
+          <View className="absolute -left-10 bottom-8">
+            <View className="w-32 h-14 pl-8 justify-center items-center bg-primary rounded-full z-20">
+              <TouchableOpacity onPress={toggleCameraFacing}>
+                  <Image 
+                    tintColor="#ffffff"
+                    source={icons.flipCamera}
+                    className="w-8 h-8"
+                    resizeMode='contain'
+                  />
+              </TouchableOpacity>
+            </View>
+          </View>
+          {/* Photo Frame Template */}
+          <View className="w-20 h-24 absolute right-2 bottom-6 bg-white items-center">
+            {photos.length > 0 ? (
+              <View className="w-16 h-16 bg-black top-2">
+                {previewPhoto && (
+                <Image source={{ uri: previewPhoto.uri }} style={{ width: 64, height: 64 }} />
+                )}
+              </View>
+            ) : (
+              <View className="w-16 h-16 items-center justify-center bg-white-100 top-2">
+                <Image 
+                    tintColor="#ffffff"
+                    source={icons.camera}
+                    className="w-5 h-5"
+                    resizeMode='contain'
+                  />
+              </View>
+            )}
+            <Text className="pl-14 pt-2.5 bottom-0 font-pbold text-sm text-primary">{photos.length}</Text>
+          </View>
+
+          {/* Back Button / Close Full Screen Button */}
+          <View className="absolute left-2 -bottom-12 py-3 pl-2 z-20">
+            <TouchableOpacity onPress={toggleFullScreen}>
+              <View className="flex-row justify-center items-center">
+                <Image 
+                    tintColor="#ffffff"
+                    source={icons.back}
+                    className="w-6 h-6"
+                    resizeMode='contain'
+                />
+                <Text className="text-xl text-white font-pbold pt-1 pl-4">Back</Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
+      )}
     </SafeAreaView>
   )
 }

@@ -6,7 +6,7 @@ import * as Location from 'expo-location';
 export default function App() {
   const [facing, setFacing] = useState('back');
   const [permission, requestPermission] = useCameraPermissions();
-  const [locationPermission, setLocationPermission] = useState(null);
+  const [locationPermission, setLocationPermission] = useState('granted');
   const [photos, setPhotos] = useState([]);
   const cameraRef = useRef(null);
 
