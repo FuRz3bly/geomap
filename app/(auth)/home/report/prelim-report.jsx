@@ -51,7 +51,7 @@ const PrelimReport = () => {
     router.back()}
 
   const proceedHandle = () => {
-    router.push("home/report/finish-report")
+    router.push("home/report/photo-report")
   }
 
   useEffect(() => {

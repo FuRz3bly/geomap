@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { ScrollView, Text, View, Image, TouchableOpacity, TextInput } from 'react-native';
+import { ScrollView, Text, View, Image, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
@@ -14,6 +14,11 @@ export default function App() {
         password: ''
     })
 
+    const registeredUsers = [
+        { username: 'azelsumanting', password: '123456' }
+    ];
+
+
     const handleInputChange = (key, value) => {
         setForm({
           ...form,
@@ -22,9 +27,27 @@ export default function App() {
       };
 
     const submit = () => {
-        console.log("Username: ", form.username)
-        console.log("Password: ", form.password)
-        router.push("home/map")
+        const processedUsername = form.username.replace(/\s+/g, '');
+        const processedPassword = form.password.replace(/\s+/g, '');
+        setForm({
+            username: processedUsername,
+            password: processedPassword
+        })
+        // Check if the user is registered
+        const user = registeredUsers.find(
+        (user) => user.username === form.username && user.password === form.password
+        );
+        if (user) {
+            router.push("home/map")
+            console.log("Username: ", form.username)
+            console.log("Password: ", form.password)
+        } else {
+            Alert.alert(
+                "Incorrect Login Information",
+                "Incorrect Username or Password.",
+                [{ text: "OK" }]
+                );
+        }
     }
 
     return (

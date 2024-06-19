@@ -23,12 +23,18 @@ import needHelp from "../assets/icons/need-help.png";
 import aboutUs from "../assets/icons/about-us.png";
 import settings from "../assets/icons/settings.png";
 import logOut from "../assets/icons/logout.png";
+
 import arrowD from "../assets/icons/arrow-down.png";
 import arrowU from "../assets/icons/arrow-up.png";
+
 import mapFocus from "../assets/icons/map-focus.png";
 import back from "../assets/icons/back-arrow.png";
+
 import toggleOn from "../assets/icons/toggle-on.png";
 import toggleOff from "../assets/icons/toggle-off.png";
+
+import nextBtn from "../assets/icons/next.png";
+import prevBtn from "../assets/icons/prev.png";
 
 import structuralFire from "../assets/icons/structural-fire.png";
 import vehicularFire from "../assets/icons/vehicular-fire.png";
@@ -123,5 +129,7 @@ export default {
   camera,
   capture,
   flipCamera,
-  fullScreen
+  fullScreen,
+  nextBtn,
+  prevBtn
 };
