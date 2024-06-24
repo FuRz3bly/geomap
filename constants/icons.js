@@ -26,12 +26,14 @@ import logOut from "../assets/icons/logout.png";
 
 import arrowD from "../assets/icons/arrow-down.png";
 import arrowU from "../assets/icons/arrow-up.png";
+import nearestArrow from "../assets/icons/nearest-arrow.png";
 
 import mapFocus from "../assets/icons/map-focus.png";
 import back from "../assets/icons/back-arrow.png";
 
 import toggleOn from "../assets/icons/toggle-on.png";
 import toggleOff from "../assets/icons/toggle-off.png";
+import moreDetails from "../assets/icons/more-details.png"
 
 import nextBtn from "../assets/icons/next.png";
 import prevBtn from "../assets/icons/prev.png";
@@ -99,6 +101,8 @@ export default {
   logOut,
   arrowD,
   arrowU,
+  moreDetails,
+  nearestArrow,
   mapFocus,
   structuralFire,
   vehicularFire,

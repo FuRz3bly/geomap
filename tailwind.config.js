@@ -25,6 +25,8 @@ module.exports = {
         white: {
           DEFAULT: "#fff",
           100: "#a3a3a3",
+          200: "#9c9c9c",
+          500: "#616161",
           red: "#fff5f2",
         },
         fire: {
@@ -32,13 +34,15 @@ module.exports = {
           100: "#ff7a45",
         },
         police: {
-          DEFAULT: "#202691",
+          DEFAULT: "#676eeb",
+          10: "#202691",
           25: "#676eeb",
           50: "#434ad1",
           100: "#222678"
         },
         drrmo: {
-          DEFAULT: "#68d65c",
+          DEFAULT: "#478a3f",
+          10: "#68d65c",
           25: "#9fff94",
           100: "#50bf43",
           200: "#478a3f"

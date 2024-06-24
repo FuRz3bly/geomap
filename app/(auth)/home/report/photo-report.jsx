@@ -1,6 +1,6 @@
-import { Text, TouchableOpacity, View, Image, Button, Alert } from 'react-native';
+import { Text, TouchableOpacity, View, Image, ScrollView, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as Location from 'expo-location';
 import React, { useState, useRef, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,9 @@ import { icons } from '../../../../constants';
 import Terms from '../../../../components/modals/terms';
 
 const PhotoReport = () => {
+  const { reportform } = useLocalSearchParams(); // Access the reportform data
+  const formatReportForm = JSON.parse(reportform); // Parse the JSON string to an object
+
   // Setting what camera face is used
   const [facing, setFacing] = useState('back');
   // Asking for Camera Permission
@@ -44,7 +47,15 @@ const PhotoReport = () => {
   }
 
   const submitHandle = () => {
-    router.push("home/report/finish-report")
+    const updatedReportForm = {
+      ...formatReportForm,
+      status: 'waiting',
+      photos: photos,
+    };
+    router.push({
+      pathname: "home/report/finish-report",
+      params: { reportform: JSON.stringify(updatedReportForm) },
+    });
   }
 
   // Getting Location and Separating Address
@@ -94,34 +105,6 @@ const PhotoReport = () => {
 
     getLocation();
   }, []);
-
-  if (!permission) {
-    // Camera permissions are still loading.
-    return <View />;
-  }
-
-  if (!permission.granted) {
-    // If camera is not granted permission yet
-    return (
-      <View style={{ justifyContent: 'center' }}>
-        <Text style={{ textAlign: 'center' }}>We need your permission to show the camera</Text>
-        <Button onPress={requestPermission} title="grant permission" />
-      </View>
-    );
-  }
-
-  if (!locationPermission) {
-    // if Location is not granted permission yet
-    return (
-      <View style={{ justifyContent: 'center', alignItems: 'center', paddingTop: 120 }}>
-        <Text style={{ textAlign: 'center' }}>We need your permission to access location</Text>
-        <Button onPress={async () => {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          setLocationPermission(status === 'granted');
-        }} title="Grant Location Permission" />
-      </View>
-    );
-  }
 
   // Switch Camera face
   function toggleCameraFacing() {

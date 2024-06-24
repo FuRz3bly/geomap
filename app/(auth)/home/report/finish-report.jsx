@@ -4,9 +4,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { icons } from "../../../../constants";
 import { images } from "../../../../constants";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 
 const FinishReport = () => {
+  const { reportform } = useLocalSearchParams(); // Access the reportform data
+  const reportForm = JSON.parse(reportform); // Parse the JSON string to an object
+
+  const proceedHandle = () => {
+    router.push({
+      pathname: "home/map",
+      params: { reportform: JSON.stringify(reportForm) },
+    });
+    console.log(reportForm)
+  }
+
   return (
     <SafeAreaView className="bg-white h-full items-center justify-center">
             {/* Title Container */}
@@ -43,7 +54,7 @@ const FinishReport = () => {
           </Text>
         </View>
       </View>
-      <TouchableOpacity className="w-56 h-16 absolute bottom-4 right-4 bg-primary items-center justify-center rounded-xl mt-2" onPress={() => {router.push("home/map")}}>
+      <TouchableOpacity className="w-56 h-16 absolute bottom-4 right-4 bg-primary items-center justify-center rounded-xl mt-2" onPress={proceedHandle}>
         <Text className="text-white font-pbold text-2xl pl-4">PROCEED {"   >"}</Text>
       </TouchableOpacity>
     </SafeAreaView>

@@ -43,7 +43,7 @@ export default function App() {
             console.log("Password: ", form.password)
         } else {
             Alert.alert(
-                "Incorrect Login Information",
+                "Access Blocked",
                 "Incorrect Username or Password.",
                 [{ text: "OK" }]
                 );
@@ -101,7 +101,7 @@ export default function App() {
                     <View className="pb-6"></View>
 
                     {/* Login Button */}
-                    <TouchableOpacity className="w-2/3 mt-5 h-12 rounded-3xl bg-white items-center justify-center" onPress={submit}>
+                    <TouchableOpacity className="w-2/3 mt-5 h-12 rounded-3xl bg-white items-center justify-center" onPress={() => {router.push("home/map")}}>
                         <Text className="text-primary font-psemibold text-2xl">LOGIN</Text>
                     </TouchableOpacity>
 
