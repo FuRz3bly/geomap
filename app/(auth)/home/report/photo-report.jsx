@@ -36,15 +36,14 @@ const PhotoReport = () => {
   // If Terms is Visible (true / false)
   const [isModalVisible, setModalVisible] = useState(false)
   // Toggle Terms and Conditions
-  const toggleModal = () => {
-    setModalVisible(!isModalVisible)
-  }
+  const toggleModal = () => {setModalVisible(!isModalVisible)}
+
+  const [photoComplete, setPhotoComplete] = useState(false)
 
   const [cameraFullScreen, setCameraFullScreen] = useState(false)
   const toggleFullScreen = () => {
     setCameraFullScreen(!cameraFullScreen)
-    setActiveCamera('camera2')
-  }
+    setActiveCamera('camera2')}
 
   const submitHandle = () => {
     const updatedReportForm = {
@@ -107,10 +106,7 @@ const PhotoReport = () => {
   }, []);
 
   // Switch Camera face
-  function toggleCameraFacing() {
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
-  }
-
+  function toggleCameraFacing() {setFacing(current => (current === 'back' ? 'front' : 'back'));}
   // Taking  a picture
   const takePicture = async () => {
     // If camera is active and shows photographs limit; three (3) photos
@@ -134,6 +130,11 @@ const PhotoReport = () => {
       setPhotos([...photos, photoData]);
       setPreviewPhoto(photoData);
       setCurrentPhotoIndex(photos.length);  // Display the newly taken photo
+
+      if (photos.length + 1 === 3) {
+        toggleFullScreen()
+        setPhotoComplete(true)
+      }
     } else {
       // Display the warning alert
       Alert.alert(
@@ -143,17 +144,29 @@ const PhotoReport = () => {
       );
     }
   };
-
+  // Next Photo Button Logic
   const showNextImage = () => {
+    if (photos.length > 0) {setCurrentPhotoIndex((prevIndex) => (prevIndex + 1) % photos.length);}};
+  // Previous Photo Button Logic
+  const showPrevImage = () => {
+    if (photos.length > 0) {setCurrentPhotoIndex((prevIndex) => (prevIndex - 1 + photos.length) % photos.length);}};
+  // Delete Current Photo Logic
+  const deleteCurrentPhoto = () => {
+    setPhotoComplete(false)
     if (photos.length > 0) {
-      setCurrentPhotoIndex((prevIndex) => (prevIndex + 1) % photos.length);
-    }
+      const updatedPhotos = photos.filter((_, index) => index !== currentPhotoIndex);
+      setPhotos(updatedPhotos);
+      setCurrentPhotoIndex(0);}};
+  
+  const retakePhoto = async () => {
+    toggleFullScreen()
   };
 
-  const showPrevImage = () => {
-    if (photos.length > 0) {
-      setCurrentPhotoIndex((prevIndex) => (prevIndex - 1 + photos.length) % photos.length);
-    }
+  const retakeAllPhotos = () => {
+    setPhotos([]);
+    setPreviewPhoto(null);
+    setCurrentPhotoIndex(0);
+    toggleFullScreen()
   };
 
   // Backbutton handler
@@ -204,50 +217,105 @@ const PhotoReport = () => {
         {/* Camera Container */}
         <View className="bg-white w-full h-full px-5">
           {/* Instructions */}
-          <Text className="font-pregular text-sm text-primary py-2">Please take
-          <Text className="font-pbold">{" "}3 photos{" "}</Text>of the Emergency / Incident.</Text>
-          <TouchableOpacity className="pt-2" onPress={() => setModalVisible(!isModalVisible)}>
-            <Text className="font-pregular text-sm text-primary py-2">
-              Read our{" "}<Text className="font-pbold">Terms and Conditions</Text>{" "}here.
-            </Text>
-          </TouchableOpacity>
+          {photos.length > 0 ? (
+            <Text className="font-psemibold text-sm text-primary py-2">Check your photos below.</Text>
+          ) : (
+            <View>
+              <Text className="font-pregular text-sm text-primary py-2">Please take
+              <Text className="font-pbold">{" "}3 photos{" "}</Text>of the Emergency / Incident.</Text>
+              <TouchableOpacity className="pt-2" onPress={() => setModalVisible(!isModalVisible)}>
+              <Text className="font-pregular text-sm text-primary py-2">
+                Read our{" "}<Text className="font-pbold">Terms and Conditions</Text>{" "}here.
+              </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <View className="pt-2">
             {/* Camera View */}
             {photos.length > 0 ? (
-              <View className="bg-primary h-[66%] w-full items-center justify-center">
-                <View className="flex-row gap-2">
-                  <View className="justify-center items-center">
+              <View className="bg-white h-[68%] w-full items-center shadow-md shadow-black">
+                {/* Photos Container */}
+                <View className="flex-row">
+                  <View className={`justify-center items-center ${photos.length > 1 ? "pt-2" : "pt-8"}`}>
                     {photos.length > 1 && (
-                      <TouchableOpacity className="h-full justify-center" onPress={showPrevImage}>
+                      // Previous Image Button
+                      <TouchableOpacity className="h-[87.5%] px-1.5 justify-center bg-primary/40" onPress={showPrevImage}>
                         <Image 
-                          tintColor="#ffffff"
+                          tintColor="#57b378"
                           source={icons.prevBtn}
-                          className="w-6 h-6"
+                          className="w-6 h-8"
                           resizeMode='contain'
                         />
                       </TouchableOpacity>
                     )}
                   </View>
-                  <View className="justify-center items-center">
+                  {/* Photo Viewer */}
+                  <View className={`justify-center items-center ${photos.length > 1 ? "pt-2" : "pt-8"}`}>
                     <Image source={{ uri: photos[currentPhotoIndex].uri }} style={{ height: 400, width: 300 }} resizeMode='contain' />
-                    <Text className="pt-3 font-pregular text-sm text-white">
-                      <Text className="font-pbold">Photo Index:</Text>{"  "}{currentPhotoIndex + 1}{"\n"}
-                      <Text className="font-pbold">Timestamp:</Text>{"   "}{photos[currentPhotoIndex].timestamp}{"\n"}
-                      <Text className="font-pbold">Address:</Text>{"  "}{locationError ? `Error: ${locationError}` : currentAddress}
-                    </Text>
+                    <View className="absolute bottom-[7%] right-[7%]">
+                      <Text className="font-pbold text-3xl text-white">0{currentPhotoIndex + 1}</Text>
+                    </View>
                   </View>
-                  <View className="justify-center items-center">
+                  <View className={`justify-center items-center ${photos.length > 1 ? "pt-2" : "pt-8"}`}>
                     {photos.length > 1 && (
-                      <TouchableOpacity className="h-full justify-center" onPress={showNextImage}>
+                      // Next Image Button
+                      <TouchableOpacity className="h-[87.5%] px-1.5 justify-center bg-primary/40" onPress={showNextImage}>
                         <Image 
-                          tintColor="#ffffff"
+                          tintColor="#57b378"
                           source={icons.nextBtn}
-                          className="w-6 h-6"
+                          className="w-6 h-8"
                           resizeMode='contain'
                         />
                       </TouchableOpacity>
                     )}
+                  </View>
+                </View>
+                {/* Buttons Container */}
+                <View className={`absolute ${photos.length > 1 ? "bottom-[2%]" : "bottom-[3%]"} left-[2%] flex-row gap-2`}>
+                  {/* Delete Photo Button */} 
+                  <TouchableOpacity onPress={deleteCurrentPhoto}>
+                    <View className="p-4 rounded-full">
+                      <Image 
+                        tintColor="#57b378"
+                        source={icons.deletePhoto}
+                        className="w-8 h-8"
+                        resizeMode='contain'
+                      />
+                    </View>
+                  </TouchableOpacity>
+                  {photos.length === 3 ? (
+                    // Retake Photo Button
+                    <TouchableOpacity onPress={retakePhoto}>
+                      <View className="p-4 rounded-full">
+                        <Image 
+                          tintColor="#57b378"
+                          source={icons.retakePhoto}
+                          className="w-8 h-8"
+                          resizeMode='contain'
+                        />
+                      </View>
+                    </TouchableOpacity>
+                  ) : (
+                    // Camera Button
+                    <TouchableOpacity onPress={retakePhoto}>
+                      <View className="p-4 rounded-full">
+                        <Image 
+                          tintColor="#57b378"
+                          source={icons.camera}
+                          className="w-8 h-8"
+                          resizeMode='contain'
+                        />
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                  {/* Retake All Photo Button */}
+                  <View className="justify-center items-center absolute -right-[145%] bottom-4">
+                    <TouchableOpacity onPress={retakeAllPhotos}>
+                      <View className="bg-primary p-2 px-6 rounded-xl">
+                        <Text className="font-pbold text-white text-sm">Retake All</Text>
+                      </View>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
@@ -268,7 +336,9 @@ const PhotoReport = () => {
             )}
 
             <View className="pl-2 pt-4">
-              <TouchableOpacity className="w-44 h-12 bottom-0 left-48 bg-primary items-center justify-center rounded-3xl mt-2" onPress={submitHandle}>
+              <TouchableOpacity className={`w-44 h-12 bottom-0 left-48 ${photoComplete === true ? "bg-primary" : "bg-white-200"} items-center justify-center rounded-3xl mt-2`} 
+              onPress={submitHandle} 
+              disabled={!photoComplete}>
                 <Text className="text-white font-pbold text-xl pl-4">SUBMIT {"   >"}</Text>
               </TouchableOpacity>
             </View>
@@ -327,21 +397,6 @@ const PhotoReport = () => {
               </View>
             )}
             <Text className="pl-14 pt-2.5 bottom-0 font-pbold text-sm text-primary">{photos.length}</Text>
-          </View>
-
-          {/* Back Button / Close Full Screen Button */}
-          <View className="absolute left-2 -bottom-12 py-3 pl-2 z-20">
-            <TouchableOpacity onPress={toggleFullScreen}>
-              <View className="flex-row justify-center items-center">
-                <Image 
-                    tintColor="#ffffff"
-                    source={icons.back}
-                    className="w-6 h-6"
-                    resizeMode='contain'
-                />
-                <Text className="text-xl text-white font-pbold pt-1 pl-4">Back</Text>
-              </View>
-            </TouchableOpacity>
           </View>
         </View>
       )}

@@ -42,11 +42,16 @@ const fetchNearbyAmenities = async (latitude, longitude, type) => {
 
     return nearbyAmenities.map(place => {
       const name = place.display_name.split(',')[0]; // Extract only the name part
+      const address = place.address || {};
+      const city = address.city || address.town || address.village || '';
+      const state = address.state || '';
+      const formattedAddress = city && state ? `${city}, ${state}` : state;
       return {
         lat: parseFloat(place.lat),
         lon: parseFloat(place.lon),
         name: name,
         type: type.description,
+        address: formattedAddress,
         tags: place.extratags || {},
       };
     });

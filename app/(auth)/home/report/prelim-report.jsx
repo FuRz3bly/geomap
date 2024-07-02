@@ -166,7 +166,7 @@ const PrelimReport = () => {
       case 'fire_station':
         return 'fire-100';
       case 'police':
-        return 'police-25';
+        return 'police';
       case 'government':
         return 'drrmo-200';
       default:
@@ -428,7 +428,7 @@ const PrelimReport = () => {
                           resizeMode='contain'
                         />
                         <Text className={reportform.type === 'traffic_accident' ? 
-                          "pt-2 font-psemibold text-xs text-police-25 text-center" 
+                          "pt-2 font-psemibold text-xs text-police text-center" 
                           : "pt-2 font-psemibold text-xs text-white-200 text-center"}>
                             Traffic{"\n"}Accident
                         </Text>
@@ -445,7 +445,7 @@ const PrelimReport = () => {
                           resizeMode='contain'
                         />
                         <Text className={reportform.type === 'assault' ? 
-                          "pt-2 font-psemibold text-xs text-police-25 text-center" 
+                          "pt-2 font-psemibold text-xs text-police text-center" 
                           : "pt-2 font-psemibold text-xs text-white-200 text-center"}>Assault &{"\n"}Battery</Text>
                       </View>
                     </TouchableOpacity>
@@ -512,7 +512,7 @@ const PrelimReport = () => {
                             resizeMode='contain'
                           />
                           <Text className={reportform.type === 'public_disturbance' ? 
-                          "pt-4 font-psemibold text-xs text-police-25 text-center" 
+                          "pt-4 font-psemibold text-xs text-police text-center" 
                           : "pt-4 font-psemibold text-xs text-white-200 text-center"}>
                             Public{"\n"}Disturbance
                           </Text>
@@ -529,7 +529,7 @@ const PrelimReport = () => {
                             resizeMode='contain'
                           />
                           <Text className={reportform.type === 'domestic_violence' ? 
-                          "pt-3 pb-2 font-psemibold text-xs text-police-25 text-center" 
+                          "pt-3 pb-2 font-psemibold text-xs text-police text-center" 
                           : "pt-3 pb-2 font-psemibold text-xs text-white-200 text-center"}>
                             Domestic{"\n"}Violence
                           </Text>
@@ -583,7 +583,7 @@ const PrelimReport = () => {
                             resizeMode='contain'
                           />
                           <Text className={reportform.type === 'personal_safety' ? 
-                          "pt-2 font-psemibold text-xs text-police-25 text-center" 
+                          "pt-2 font-psemibold text-xs text-police text-center" 
                           : "pt-2 font-psemibold text-xs text-white-200 text-center"}>
                             Personal{"\n"}Safety
                           </Text>
@@ -600,7 +600,7 @@ const PrelimReport = () => {
                             resizeMode='contain'
                           />
                           <Text className={reportform.type === 'theft' ? 
-                          "pt-2 font-psemibold text-xs text-police-25 text-center" 
+                          "pt-2 font-psemibold text-xs text-police text-center" 
                           : "pt-2 font-psemibold text-xs text-white-200 text-center"}>
                             Theft &{"\n"}Burglary
                           </Text>
@@ -617,7 +617,7 @@ const PrelimReport = () => {
                             resizeMode='contain'
                           />
                           <Text className={reportform.type === 'active_shooting' ? 
-                          "pb-2 font-psemibold text-xs text-police-25 text-center" 
+                          "pb-2 font-psemibold text-xs text-police text-center" 
                           : "pb-2 font-psemibold text-xs text-white-200 text-center"}>
                             Active{"\n"}Shooting
                           </Text>

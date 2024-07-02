@@ -1,22 +1,29 @@
 import logo from "../assets/icons/geomap-icon-1.png";
 import profile from "../assets/icons/profile.png";
 import profileBorder from "../assets/icons/profile-border.png";
+
 import eyeHide from "../assets/icons/eye-hide.png";
 import eye from "../assets/icons/eye.png";
+
 import checkBox from "../assets/icons/checkbox.png";
 import checkBoxCheck from "../assets/icons/checkbox-check.png";
+
 import upload from "../assets/icons/upload.png";
 import close from "../assets/icons/close.png";
 import verified from "../assets/icons/verified.png";
+
 import account from "../assets/icons/account.png";
 import terms from "../assets/icons/terms.png";
 import contactUs from "../assets/icons/contact-us.png";
 import accountManagement from "../assets/icons/account-management.png";
 import accountBanned from "../assets/icons/account-banned.png";
 import acknowledgement from "../assets/icons/acknowledgement.png";
+
 import report from "../assets/icons/report.png";
+
 import menu from "../assets/icons/menu.png";
 import menuBack from "../assets/icons/menu-flip.png";
+
 import home from "../assets/icons/home.png";
 import help from "../assets/icons/help.png";
 import needHelp from "../assets/icons/need-help.png";
@@ -29,14 +36,25 @@ import arrowU from "../assets/icons/arrow-up.png";
 import nearestArrow from "../assets/icons/nearest-arrow.png";
 
 import mapFocus from "../assets/icons/map-focus.png";
+import mapStyle from "../assets/icons/map-style.png";
+import mapBW from "../assets/icons/map-bw.png";
+import mapDefault from "../assets/icons/map-default.png";
+import mapNight from "../assets/icons/map-night.png";
+import mapVintage from "../assets/icons/map-vintage.png";
+import mapWasp from "../assets/icons/map-wasp.png";
+import mapElevation from "../assets/icons/map-elevation.png";
+import mapEIM from "../assets/icons/map-eim.png";
 import back from "../assets/icons/back-arrow.png";
+import traffic from "../assets/icons/traffic.png";
 
 import toggleOn from "../assets/icons/toggle-on.png";
 import toggleOff from "../assets/icons/toggle-off.png";
-import moreDetails from "../assets/icons/more-details.png"
+import moreDetails from "../assets/icons/more-details.png";
+import nearby from "../assets/icons/nearby.png";
 
 import nextBtn from "../assets/icons/next.png";
 import prevBtn from "../assets/icons/prev.png";
+import expandUp from "../assets/icons/expand.png";
 
 import structuralFire from "../assets/icons/structural-fire.png";
 import vehicularFire from "../assets/icons/vehicular-fire.png";
@@ -58,19 +76,21 @@ import abuse from "../assets/icons/abuse.png";
 import publicDisturbance from "../assets/icons/public-disturbance.png";
 import murder from "../assets/icons/murder.png";
 
-import policeStation from "../assets/icons/police-station.png"
-import fireStation from "../assets/icons/fire-station.png"
-import government from "../assets/icons/government.png"
-import townHall from "../assets/icons/town-hall.png"
-import municipalHall from "../assets/icons/municipal-hall.png"
+import policeStation from "../assets/icons/police-station.png";
+import fireStation from "../assets/icons/fire-station.png";
+import government from "../assets/icons/government.png";
+import townHall from "../assets/icons/town-hall.png";
+import municipalHall from "../assets/icons/municipal-hall.png";
 
-import ambulance from "../assets/icons/ambulance.png"
-import fireTruck from "../assets/icons/fire-truck.png"
+import ambulance from "../assets/icons/ambulance.png";
+import fireTruck from "../assets/icons/fire-truck.png";
 
-import camera from "../assets/icons/camera.png"
-import capture from "../assets/icons/capture.png"
-import flipCamera from "../assets/icons/flip-camera.png"
-import fullScreen from "../assets/icons/full-screen.png"
+import camera from "../assets/icons/camera.png";
+import capture from "../assets/icons/capture.png";
+import flipCamera from "../assets/icons/flip-camera.png";
+import fullScreen from "../assets/icons/full-screen.png";
+import deletePhoto from "../assets/icons/delete.png";
+import retakePhoto from "../assets/icons/retake-photo.png";
 
 export default {
   logo,
@@ -92,9 +112,11 @@ export default {
   report,
   menu,
   back,
+  nearby,
   menuBack,
   home,
   help,
+  traffic,
   needHelp,
   aboutUs,
   settings,
@@ -104,6 +126,7 @@ export default {
   moreDetails,
   nearestArrow,
   mapFocus,
+  mapStyle,
   structuralFire,
   vehicularFire,
   explosion,
@@ -135,5 +158,15 @@ export default {
   flipCamera,
   fullScreen,
   nextBtn,
-  prevBtn
+  prevBtn,
+  expandUp,
+  deletePhoto,
+  retakePhoto,
+  mapBW,
+  mapDefault,
+  mapNight,
+  mapVintage,
+  mapWasp,
+  mapElevation,
+  mapEIM
 };

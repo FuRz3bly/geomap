@@ -49,8 +49,10 @@ export default function Menu({ visible, onClose }) {
     <Modal
         isVisible={visible}
         onBackdropPress={onClose}
+        hideModalContentWhileAnimating={true}
+        backdropTransitionOutTiming={0}
         animationIn="slideInLeft"
-        animationOut="slideOutLeft"
+        animationOut="fadeOutLeft"
     >
         <SafeAreaView className="h-full absolute -inset-y-6 -left-5 w-[62%]">
             <View className="h-10 bg-primary"></View>

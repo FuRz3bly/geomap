@@ -10,7 +10,6 @@ import Terms from '../../../components/modals/terms'
 
 export default function SignupI() {
   const [image, setImage] = useState(null);
-  const [showView, setShowView] = useState(true);
 
   const [isModalVisible, setModalVisible] = useState(false)
   const toggleModal = () => {
@@ -26,11 +25,8 @@ export default function SignupI() {
       quality: 1,
     });
 
-    setShowView(!showView)
-
     if (!result.canceled) {
       setImage(result.assets[0].uri);
-      setShowView(showView)
     }
   };
 
