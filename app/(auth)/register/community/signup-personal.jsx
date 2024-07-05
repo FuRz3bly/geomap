@@ -3,21 +3,21 @@ import { Link, router } from 'expo-router'
 import React, { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import { icons } from '../../../constants'
+import { icons } from '../../../../constants'
 
-import Terms from '../../../components/modals/terms'
+import Terms from '../../../../components/modals/terms'
 
 const SignupP = () => {
   const [form, setForm] = useState({
     type: 'community',
-    fullname: {
-      lastname: '',
-      firstname: '',
-      middlename: ''
+    name: {
+      last_name: '',
+      first_name: '',
+      middle_name: ''
     },
     username: '',
     address: '',
-    phoneNum: '',
+    phone_number: '',
     email: '',
     password: ''
   })
@@ -39,7 +39,7 @@ const SignupP = () => {
     // Implement signup logic here
     console.log('Signing up...');
     console.log('Form Data:', form);
-    router.push("community/signup-image")
+    router.push("register/community/signup-image")
   };
 
   return (
@@ -64,8 +64,8 @@ const SignupP = () => {
                 placeholder='Last Name'
                 placeholderTextColor='#6a9c7c'
                 autoFocus
-                value={form.fullname.lastname}
-                onChangeText={(text) => handleInputChange('fullname', {...form.fullname, lastname: text})}>
+                value={form.fullname.last_name}
+                onChangeText={(text) => handleInputChange('fullname', {...form.fullname, last_name: text})}>
               </TextInput>
             </View>
             <View style={{paddingBottom: 6}}></View>
@@ -76,8 +76,8 @@ const SignupP = () => {
                 placeholder='First Name'
                 placeholderTextColor='#6a9c7c'
                 autoCapitalize='sentences'
-                value={form.fullname.firstname}
-                onChangeText={(text) => handleInputChange('fullname', {...form.fullname, firstname: text})}>
+                value={form.fullname.first_name}
+                onChangeText={(text) => handleInputChange('fullname', {...form.fullname, first_name: text})}>
               </TextInput>
             </View>
             <View style={{paddingBottom: 6}}></View>
@@ -88,8 +88,8 @@ const SignupP = () => {
                 placeholder='Middle Name'
                 placeholderTextColor='#6a9c7c'
                 autoCapitalize='sentences'
-                value={form.fullname.middlename}
-                onChangeText={(text) => handleInputChange('fullname', {...form.fullname, middlename: text})}>
+                value={form.fullname.middle_name}
+                onChangeText={(text) => handleInputChange('fullname', {...form.fullname, middle_name: text})}>
               </TextInput>
             </View>
             <View style={{paddingBottom: 6}}></View>
@@ -124,8 +124,8 @@ const SignupP = () => {
                 className="flex-1 text-md font-pmedium text-primary"
                 placeholder='Phone Number'
                 placeholderTextColor='#6a9c7c'
-                value={form.fullname.phoneNum}
-                onChangeText={(text) => handleInputChange('phoneNum', text)}>
+                value={form.fullname.phone_number}
+                onChangeText={(text) => handleInputChange('phone_number', text)}>
               </TextInput>
             </View>
             <View style={{paddingBottom: 6}}></View>

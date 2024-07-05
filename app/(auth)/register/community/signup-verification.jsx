@@ -2,8 +2,8 @@ import { View, Text, Image, TouchableOpacity } from "react-native";
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { icons } from "../../../constants";
-import { images } from "../../../constants";
+import { icons } from "../../../../constants";
+import { images } from "../../../../constants";
 import { router } from "expo-router";
 
 const SignupV = () => {
@@ -25,11 +25,11 @@ const SignupV = () => {
             resizeMode="contain"
           />
           <Text className="font-psemibold text-2xl pt-7 text-center">
-            Account Verification{"\n"}Successful
+            Account Verification{"\n"}Sucessful
           </Text>
         </View>
       </View>
-      <TouchableOpacity className="w-56 h-16 absolute bottom-4 right-4 bg-primary items-center justify-center rounded-xl mt-2" onPress={() => {router.push("home/map")}}>
+      <TouchableOpacity className="w-56 h-16 absolute bottom-4 right-4 bg-primary items-center justify-center rounded-xl mt-2" onPress={() => {router.push("home/geolocation/map-c")}}>
         <Text className="text-white font-pbold text-2xl pl-4">PROCEED {"   >"}</Text>
       </TouchableOpacity>
     </SafeAreaView>

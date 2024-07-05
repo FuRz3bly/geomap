@@ -3,9 +3,9 @@ import { router } from 'expo-router'
 import React, { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import { icons } from '../../../constants'
+import { icons } from '../../../../constants'
 
-import Terms from '../../../components/modals/terms'
+import Terms from '../../../../components/modals/terms'
 
 const SignupP = () => {
   const [form, setForm] = useState({
@@ -49,7 +49,7 @@ const SignupP = () => {
     // Implement signup logic here
     console.log('Signing up...');
     console.log('Form Data:', form);
-    router.push("responder/signup-image")
+    router.push("register/responder/signup-image")
   };
 
   return (

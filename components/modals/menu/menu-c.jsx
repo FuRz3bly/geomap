@@ -4,20 +4,20 @@ import Modal from 'react-native-modal';
 import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 
-import { icons } from '../../constants'
+import { icons } from '../../../constants'
 
-export default function Menu({ visible, onClose }) {
+export default function MenuC({ visible, onClose }) {
     const [option, setOption] = useState('op1');
     const router = useRouter();
 
     const homeMenu = () => {
         setOption('op1')
-        router.push('home/map')
+        router.push('home/geolocation/map-c')
     };
 
     const accountMenu = () => {
         setOption('op2')
-        router.push('home/profile')
+        router.push('home/details/profile')
     };
 
     const reportMenu = () => {
@@ -27,22 +27,23 @@ export default function Menu({ visible, onClose }) {
 
     const helpMenu = () => {
         setOption('op4')
-        router.push('home/help')
+        router.push('home/details/help')
     };
 
     const aboutMenu = () => {
         setOption('op5')
-        router.push('home/about-us')
+        router.push('home/details/about-us')
     };
 
     const settingsMenu = () => {
         setOption('op6')
-        router.push('home/settings')
+        router.push('home/settings/settings')
     };
 
     const logoutMenu = () => {
         setOption('op7')
-        router.push('/')
+        router.push('/login')
+        onClose()
     };
 
     return (

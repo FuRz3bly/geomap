@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { TextProps, GestureResponderEvent } from 'react-native';
 
 export namespace ExpoRouter {
-  type StaticRoutes = `/` | `/(auth)` | `/_sitemap` | `/community/signup-image` | `/community/signup-personal` | `/community/signup-verification` | `/home/about-us` | `/home/help` | `/home/map` | `/home/profile` | `/home/report/finish-report` | `/home/report/photo-report` | `/home/report/prelim-report` | `/home/settings` | `/login` | `/responder/signup-image` | `/responder/signup-personal` | `/responder/signup-verification` | `/signup-choose`;
+  type StaticRoutes = `/` | `/(auth)` | `/_sitemap` | `/home/details/about-us` | `/home/details/help` | `/home/details/profile` | `/home/geolocation/map-c` | `/home/geolocation/map-r` | `/home/report/finish-report` | `/home/report/photo-report` | `/home/report/prelim-report` | `/home/settings/settings` | `/login` | `/register/community/signup-image` | `/register/community/signup-personal` | `/register/community/signup-verification` | `/register/responder/signup-image` | `/register/responder/signup-personal` | `/register/responder/signup-verification` | `/user-registration`;
   type DynamicRoutes<T extends string> = `/search/${SingleRoutePart<T>}`;
   type DynamicRouteTemplate = `/search/[query]`;
 

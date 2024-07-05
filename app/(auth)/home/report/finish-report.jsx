@@ -12,7 +12,7 @@ const FinishReport = () => {
 
   const proceedHandle = () => {
     router.push({
-      pathname: "home/map",
+      pathname: "home/geolocation/map-c",
       params: { reportform: JSON.stringify(reportForm) },
     });
     console.log(reportForm)
@@ -30,7 +30,7 @@ const FinishReport = () => {
                 resizeMode="contain"
               />
             </View>
-            <View className="absolute inset-0 left-6 top-[126px] bg-primary h-1 w-[88%] items-center"></View>
+            <View className="absolute inset-0 left-6 top-[126px] bg-primary h-1 w-[88%] items-center" />
             {/* Page Indicators */}
             <View className="pt-4 flex-row gap-40 items-center justify-center bottom-0">
               <View className="bg-primary h-4 w-4 rounded-full justify-center items-center">

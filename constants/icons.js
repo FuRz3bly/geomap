@@ -4,6 +4,8 @@ import profileBorder from "../assets/icons/profile-border.png";
 
 import eyeHide from "../assets/icons/eye-hide.png";
 import eye from "../assets/icons/eye.png";
+import community from "../assets/icons/community.png";
+import responder from "../assets/icons/responder.png";
 
 import checkBox from "../assets/icons/checkbox.png";
 import checkBoxCheck from "../assets/icons/checkbox-check.png";
@@ -11,6 +13,11 @@ import checkBoxCheck from "../assets/icons/checkbox-check.png";
 import upload from "../assets/icons/upload.png";
 import close from "../assets/icons/close.png";
 import verified from "../assets/icons/verified.png";
+import verification from "../assets/icons/verification.png";
+import failed from "../assets/icons/failed.png";
+import received from "../assets/icons/received.png";
+import responded from "../assets/icons/responded.png";
+import arrival from "../assets/icons/arrival.png";
 
 import account from "../assets/icons/account.png";
 import terms from "../assets/icons/terms.png";
@@ -35,7 +42,14 @@ import arrowD from "../assets/icons/arrow-down.png";
 import arrowU from "../assets/icons/arrow-up.png";
 import nearestArrow from "../assets/icons/nearest-arrow.png";
 
+import birthdate from "../assets/icons/birthdate.png";
+import username from "../assets/icons/username.png";
+import email from "../assets/icons/email.png";
+import phone from "../assets/icons/phone.png";
+import address from "../assets/icons/address.png";
+
 import mapFocus from "../assets/icons/map-focus.png";
+import navigate from "../assets/icons/navigate.png";
 import mapStyle from "../assets/icons/map-style.png";
 import mapBW from "../assets/icons/map-bw.png";
 import mapDefault from "../assets/icons/map-default.png";
@@ -98,6 +112,8 @@ export default {
   profileBorder,
   eyeHide,
   eye,
+  responder,
+  community,
   checkBox,
   checkBoxCheck,
   upload,
@@ -168,5 +184,16 @@ export default {
   mapVintage,
   mapWasp,
   mapElevation,
-  mapEIM
+  mapEIM,
+  navigate,
+  verification,
+  failed,
+  responded,
+  received,
+  arrival,
+  birthdate,
+  username,
+  email,
+  phone,
+  address
 };

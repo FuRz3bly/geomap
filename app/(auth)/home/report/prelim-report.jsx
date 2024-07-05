@@ -3,10 +3,12 @@ import { useRouter } from 'expo-router'
 import React, { useState, useEffect } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { icons } from '../../../../constants'
-
+import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
+import { useUser } from '../../../../constants/users/UserContext'
 
 const PrelimReport = () => {
+  const { currentUser } = useUser();
   const [description, setDescription] = useState(''); // New state variable for description
   const router = useRouter();
 
@@ -38,8 +40,8 @@ const PrelimReport = () => {
   const handleServiceChange = (service) => {
     setReportForm((prevForm) => {
       const newServices = prevForm.services.includes(service)
-        ? prevForm.services.filter((s) => s !== service)
-        : [...prevForm.services, service];
+          ? prevForm.services.filter((s) => s !== service)
+          : [...prevForm.services.filter(s => s.length > 0), service];
       return { ...prevForm, services: newServices };
     });
   };
@@ -56,7 +58,11 @@ const PrelimReport = () => {
   };
 
   const date = new Date();
-  const dateString = date.toLocaleDateString();
+  // Format date to "YYYY-MM-DD"
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0'); // Adding 1 because getMonth() returns zero-based month
+  const day = String(date.getDate()).padStart(2, '0');
+  const dateString = `${year}-${month}-${day}`
   const [showDateDropdown, setshowDateDropdown] = useState(false)
 
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -105,10 +111,18 @@ const PrelimReport = () => {
 
   const [reportform, setReportForm] = useState({
     id: generateRandomId(),
-    status: 'preliminary',
+    user: {
+      user_id: currentUser.user_id,
+      username: currentUser.username,
+      fullname: currentUser.fullname,
+      address: currentUser.address,
+      phone_number: currentUser.phone_number,
+      email: currentUser.email,
+      photo_id: currentUser.photo_id
+    },
+    status: "preliminary",
     date: dateString,
     time: timeString,
-    location: currentAddress,
     latitude: null,
     longitude: null,
     handler: "",
@@ -146,7 +160,7 @@ const PrelimReport = () => {
           setCurrentAddress(formattedAddress);
           setReportForm((prevForm) => ({
             ...prevForm,
-            location: formattedAddress,
+            address: formattedAddress,
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
         }));
@@ -736,6 +750,7 @@ const PrelimReport = () => {
             <View className="pb-5" />
         </View>
       </ScrollView>
+      <StatusBar backgroundColor='#57b378' style={'light'} />
     </SafeAreaView>
   )
 }

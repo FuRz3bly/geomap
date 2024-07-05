@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import {icons} from "../../constants"
 
-const Report = ({ visible, onClose, reportForm }) => {
+const Report = ({ visible, onClose, reportForm, userDetails }) => {
     // Profile Components
     const [showProfile, setShowProfile] = useState(false)
     // Toggle Profile
@@ -14,7 +14,15 @@ const Report = ({ visible, onClose, reportForm }) => {
     const formatId = (id) => {return `${id.slice(0, 3)}-${id.slice(3, 6)}-${id.slice(6, 9)}`};
     // Format services to be Service, Service
     const formatServices = (services) => {
-        return services.map(service => service.charAt(0).toUpperCase() + service.slice(1)).join(', ')};
+        const validServices = services.filter(service => service.length > 0);
+        if (validServices.length === 0) return '';
+        if (validServices.length === 1) return validServices[0].charAt(0).toUpperCase() + validServices[0].slice(1);
+        return validServices.map(service => service.charAt(0).toUpperCase() + service.slice(1)).join(', ');
+    };
+    // Format Total Reports to 1 - 001
+        const formatReport = (number, length) => {
+        return number.toString().padStart(length, '0');
+        }
     // All emergency types
   const emergency_types = [
     // Fire Emergency Types
@@ -94,11 +102,11 @@ const Report = ({ visible, onClose, reportForm }) => {
                     <>
                         <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Report ID:{"   "}</Text>#{formatId(reportForm.id)}</Text>
                         <Text className="text-primary font-pregular text-sm pt-1 pb-1"><Text className="font-pbold">Status:{"   "}</Text>{getStatus(reportForm.status)}</Text>
-                        {showProfile === false ? (
+                        { showProfile === false ? (
                         <TouchableOpacity onPress={toggleProfile}>
                             <View className="border-y-0.5 border-primary py-2">
                             <View className="flex-row">
-                                <Text className="text-primary font-pregular text-sm"><Text className="font-pbold">User:{"   "}</Text>Azel Sumanting</Text>
+                                <Text className="text-primary font-pregular text-sm"><Text className="font-pbold">User:{"   "}</Text>{reportForm.user.fullname.firstname}{" "}{reportForm.user.fullname.lastname}</Text>
                                 <View className="absolute right-0 -inset-y-1.5">
                                 <View className="rounded-full w-8 h-8 flex-row items-center justify-center px-2">
                                     <Image 
@@ -115,8 +123,10 @@ const Report = ({ visible, onClose, reportForm }) => {
                         ) : (
                         <TouchableOpacity onPress={toggleProfile}>
                             <View className="border-y-0.5 border-primary py-2">
-                            <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Name:{"   "}</Text>Azel Ventura Sumanting</Text>
-                            <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Username:{"   "}</Text>azelsumanting</Text>
+                            <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Name:{"   "}</Text>
+                                {reportForm.user.fullname.firstname}{" "}{reportForm.user.fullname.middlename}{" "}{reportForm.user.fullname.lastname}
+                            </Text>
+                            <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Username:{"   "}</Text>{reportForm.user.username}</Text>
                             <View className="py-2" />
                             <View className="w-64 h-32 items-center justify-center bg-white-100 rounded-2xl">
                                 <Image 
@@ -127,17 +137,21 @@ const Report = ({ visible, onClose, reportForm }) => {
                                 />
                             </View>
                             <View className="py-2" />
-                            <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Address:{"   "}</Text>Bulihan, Silang, Cavite</Text>
-                            <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Phone Number:{"   "}</Text>09123456789</Text>
-                            <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Email:{"   "}</Text>azelsumanting@gmail.com</Text>
-                            <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Total Reports:{"   "}</Text>002</Text>
+                            <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Address:{"   "}</Text>{reportForm.user.address}</Text>
+                            <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Phone Number:{"   "}</Text>{"(064)"}{reportForm.user.phone_number}</Text>
+                            <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Email:{"   "}</Text>{reportForm.user.email}</Text>
+                            <>
+                                {userDetails ? (
+                                    <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Total Reports:{"   "}</Text>{formatReport(userDetails.reports, 3)}</Text>
+                                ) : (<Text></Text>)}
+                            </>
                             </View>
                         </TouchableOpacity>
                         )}
                         <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Date:{"   "}</Text>{reportForm.date}</Text>
                         <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Time:{"   "}</Text>{reportForm.time}</Text>
-                        <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Location:{"   "}</Text>{reportForm.latitude}{"  "}{"|"}{"  "}{reportForm.longitude}</Text>
-                        <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Address:{"   "}</Text>{reportForm.location}</Text>
+                        <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Location:{"   "}</Text>{(reportForm.latitude).toFixed(2)}{"  "}{"|"}{"  "}{(reportForm.longitude).toFixed(2)}</Text>
+                        <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Address:{"   "}</Text>{reportForm.address}</Text>
                         <Text className="text-primary font-pregular text-sm pt-1"><Text className="font-pbold">Type:{"   "}</Text>{getEmergency(reportForm.type)}</Text>
                         <Text className="text-primary font-pregular text-sm pt-1 pb-2"><Text className="font-pbold">Services:{"   "}</Text>{formatServices(reportForm.services)}</Text>
                         <View className="border-y-0.5 border-primary py-2 pb-4">

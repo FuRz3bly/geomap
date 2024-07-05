@@ -6,15 +6,24 @@ module.exports = {
       colors: {
         primary: {
           DEFAULT: "#57b378",
+          10: "#bfffd6",
           50: "#86ebaa",
           75: "#7cd99d",
           85: "#6fc78f",
-          100: "#3b8a57"
+          100: "#3b8a57",
+          200: "#42e3a8"
+        },
+        highlight: {
+          DEFAULT: "#FDFFAE",
+          20: "#fffd99"
         },
         secondary: {
-          DEFAULT: "#FDFFAE",
-          100: "#42e3a8",
-          200: "#fffd99",
+          DEFAULT: "#00B0F0",
+          100: "",
+          200: "",
+        },
+        error: {
+          DEFAULT: "#de4e55"
         },
         black: {
           DEFAULT: "#000",

@@ -1,9 +1,11 @@
-import { View, Text } from 'react-native'
+import { View, Text, Image, TouchableOpacity } from 'react-native'
 import React from 'react'
 import Modal from 'react-native-modal';
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-const Amenity = ({ visible, onClose, selectData }) => {
+import { icons } from '../../constants'
+
+const Amenity = ({ visible, onClose, selectData, navigate }) => {
     return (
         <Modal
         isVisible={visible}
@@ -21,6 +23,20 @@ const Amenity = ({ visible, onClose, selectData }) => {
     >
     <SafeAreaView className="absolute -bottom-5 -inset-x-5">
         <View className="w-120 h-30 justify-center bg-primary py-4">
+            <View className="py-4">
+                <View className="absolute -top-12 right-0 bg-primary w-20 h-20 rounded-full items-center justify-center">
+                    <TouchableOpacity onPress={navigate}>
+                        <View className="bg-white rounded-full w-14 h-14 flex-row items-center justify-center px-2">
+                            <Image 
+                                tintColor="#57b378"
+                                source={icons.navigate}
+                                className="w-6 h-6"
+                                resizeMode='contain'
+                                />
+                        </View>
+                    </TouchableOpacity>
+                </View>
+            </View>
             {/* Line Separator */}
             <View className="border-t-0.5 border-white/40" />
             {selectData && (

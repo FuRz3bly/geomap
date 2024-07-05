@@ -4,9 +4,9 @@ import { StyleSheet, ScrollView, View, Text, Image, TouchableOpacity } from 'rea
 import { router } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 
-import { icons } from '../../../constants'
+import { icons } from '../../../../constants'
 
-import Terms from '../../../components/modals/terms'
+import Terms from '../../../../components/modals/terms'
 
 export default function SignupI() {
   const [image, setImage] = useState(null);
@@ -80,7 +80,7 @@ export default function SignupI() {
               </TouchableOpacity>
               
               {/* Create My Account Button */}
-              <TouchableOpacity className="w-4/5 h-12" style={styles.createButton} onPress={() => {router.push("responder/signup-verification")}}>
+              <TouchableOpacity className="w-4/5 h-12" style={styles.createButton} onPress={() => {router.push("register/responder/signup-verification")}}>
                 <Text className="text-white font-psemibold text-xl">CREATE MY ACCOUNT</Text>
               </TouchableOpacity>
               <View className="pb-24"></View>

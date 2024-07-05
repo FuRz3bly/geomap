@@ -52,7 +52,7 @@ const PhotoReport = () => {
       photos: photos,
     };
     router.push({
-      pathname: "home/report/finish-report",
+      pathname: "home/geolocation/map-c",
       params: { reportform: JSON.stringify(updatedReportForm) },
     });
   }

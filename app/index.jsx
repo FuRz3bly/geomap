@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { ScrollView, Text, View, Image, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { Text, View, Image, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
@@ -8,113 +8,31 @@ import { images } from '../constants'
 import { icons } from '../constants'
 
 export default function App() {
-    const [showPassword, setshowPassword] = useState(false)
-    const [form, setForm] = useState({
-        username: '',
-        password: ''
-    })
-
-    const registeredUsers = [
-        { username: 'azelsumanting', password: '123456' }
-    ];
-
-
-    const handleInputChange = (key, value) => {
-        setForm({
-          ...form,
-          [key]: value,
-        });
-      };
-
-    const submit = () => {
-        const processedUsername = form.username.replace(/\s+/g, '');
-        const processedPassword = form.password.replace(/\s+/g, '');
-        setForm({
-            username: processedUsername,
-            password: processedPassword
-        })
-        // Check if the user is registered
-        const user = registeredUsers.find(
-        (user) => user.username === form.username && user.password === form.password
-        );
-        if (user) {
-            router.push("home/map")
-            console.log("Username: ", form.username)
-            console.log("Password: ", form.password)
-        } else {
-            Alert.alert(
-                "Access Blocked",
-                "Incorrect Username or Password.",
-                [{ text: "OK" }]
-                );
-        }
-    }
-
     return (
         <SafeAreaView className="bg-primary h-full">
-            <ScrollView>
                 {/* Login Container */}
-                <View className="w-full justify-center items-center min-h-[100vh] px-4">
-                    <View className="pb-9">
-                        {/* GEOMAP Title Card */}
+                <View className="w-full items-center min-h-[100vh] px-4">
+                    {/* GEOMAP Title Card */}
+                    <View className="absolute top-[20%] w-full items-center">
                         <Image 
                             source={images.title_w}
-                            className="w-[295px] h-[74px]"
+                            className="w-[350px] h-[150px]"
                             resizeMode='contain'
                         />
                     </View>
-                    
-                    {/* Username Input */}
-                    <View className="space-y-2 px-4 w-full h-16 border-3 border-red bg-white focus:border-black rounded-2xl items-center flex-row">
-                        <TextInput
-                            className="w-full text-md font-pmedium text-primary"
-                            placeholder='Username'
-                            placeholderTextColor='#94A3B8'
-                            value={form.username}
-                            onChangeText={(text) => handleInputChange('username', text)}>
-                        </TextInput>
-                    </View>
-                    {/* Spacing = PaddingBottom = 3 */}
-                    <View className="pb-3"></View>
+                    {/* Sign Up Button */}
+                    <View className="absolute bottom-[10%] w-full items-center">
+                        <TouchableOpacity className="w-5/6 h-12 py-2 rounded-3xl bg-white items-center justify-center" onPress={() => {router.push("/user-registration")}}>
+                            <Text className="text-primary font-psemibold text-xl">SIGN UP</Text>
+                        </TouchableOpacity>
 
-                    {/* Password Input */}
-                    <View className="space-y-2 px-4 w-full h-16 border-3 border-red bg-white focus:border-black rounded-2xl items-center flex-row">
-                        <TextInput
-                            className="w-[93%] text-md font-pmedium text-primary"
-                            placeholder='Password'
-                            placeholderTextColor='#94A3B8'
-                            secureTextEntry={!showPassword}
-                            value={form.password}
-                            onChangeText={(text) => handleInputChange('password', text)}>
-                        </TextInput>
-                        {/* Visible Password Button */}
-                        <TouchableOpacity className="pb-2" onPress={() => setshowPassword(!showPassword)}>
-                            <Image 
-                                tintColor="#57b378"
-                                source={!showPassword ? icons.eye : icons.eyeHide}
-                                className="w-6 h-6"
-                                resizeMode='contain'
-                            />
+                        {/* Login Button */}
+                        <TouchableOpacity className="w-5/6 mt-6 h-12 py-2 rounded-3xl bg-primary-50 items-center justify-center" onPress={() => {router.push("/login")}}>
+                            <Text className="text-white primary font-psemibold text-xl">LOGIN</Text>
                         </TouchableOpacity>
                     </View>
-                    {/* Spacing = PaddingBottom = 6 */}
-                    <View className="pb-6"></View>
-
-                    {/* Login Button */}
-                    <TouchableOpacity className="w-2/3 mt-5 h-12 rounded-3xl bg-white items-center justify-center" onPress={() => {router.push("home/map")}}>
-                        <Text className="text-primary font-psemibold text-2xl">LOGIN</Text>
-                    </TouchableOpacity>
-
-                    {/* Sign Up Button */}
-                    <View className="justify-center pt-3 flex-row gap-1">
-                        <Link href="/signup-choose">
-                            <Text className="text-md text-white font-psemibold">Don't have account?</Text>
-                            <Text className="text-md font-pbold text-secondary">{" "}Sign Up</Text>
-                        </Link>
-                    </View>
                 </View>
-            </ScrollView>
-            <StatusBar backgroundColor='#57b378' style={'light'} />
+            <StatusBar backgroundColor='#3b8a57' style={'light'} />
         </SafeAreaView>
     );
 }
