@@ -1,4 +1,4 @@
-const elevationMode = [
+const elevation_theme = [
     {
         "featureType": "administrative",
         "elementType": "labels",
@@ -190,4 +190,4 @@ const elevationMode = [
     }
 ];
 
-export default elevationMode
+export default elevation_theme

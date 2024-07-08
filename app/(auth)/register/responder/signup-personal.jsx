@@ -49,7 +49,6 @@ const SignupP = () => {
     // Implement signup logic here
     console.log('Signing up...');
     console.log('Form Data:', form);
-    router.push("register/responder/signup-image")
   };
 
   return (

@@ -7,6 +7,7 @@ import eye from "../assets/icons/eye.png";
 import community from "../assets/icons/community.png";
 import responder from "../assets/icons/responder.png";
 
+import check from "../assets/icons/check.png";
 import checkBox from "../assets/icons/checkbox.png";
 import checkBoxCheck from "../assets/icons/checkbox-check.png";
 
@@ -60,6 +61,7 @@ import mapElevation from "../assets/icons/map-elevation.png";
 import mapEIM from "../assets/icons/map-eim.png";
 import back from "../assets/icons/back-arrow.png";
 import traffic from "../assets/icons/traffic.png";
+import filter from "../assets/icons/filter.png"
 
 import toggleOn from "../assets/icons/toggle-on.png";
 import toggleOff from "../assets/icons/toggle-off.png";
@@ -75,6 +77,7 @@ import vehicularFire from "../assets/icons/vehicular-fire.png";
 import explosion from "../assets/icons/explosion.png";
 import wildfire from "../assets/icons/wildfire.png";
 import gasleak from "../assets/icons/gasleak.png";
+import missingPerson from "../assets/icons/missing-person.png"
 
 import searchRescue from "../assets/icons/search-rescue.png"
 import rescue from "../assets/icons/rescue.png";
@@ -83,6 +86,7 @@ import personalSafety from "../assets/icons/personal-safety.png";
 import massCasualty from "../assets/icons/mass-casualty.png";
 import disaster from "../assets/icons/disaster.png";
 
+import burglary from '../assets/icons/burglary.png'
 import theft from "../assets/icons/theft.png";
 import assault from "../assets/icons/assault.png";
 import vehicleCrash from "../assets/icons/vehicle-crash.png";
@@ -114,6 +118,7 @@ export default {
   eye,
   responder,
   community,
+  check,
   checkBox,
   checkBoxCheck,
   upload,
@@ -133,6 +138,7 @@ export default {
   home,
   help,
   traffic,
+  filter,
   needHelp,
   aboutUs,
   settings,
@@ -148,9 +154,11 @@ export default {
   explosion,
   wildfire,
   gasleak,
+  missingPerson,
   searchRescue,
   rescue,
   theft,
+  burglary,
   assault,
   vehicleCrash,
   abuse,

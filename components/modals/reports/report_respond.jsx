@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import { icons } from '../../../constants';
 import { images } from '../../../constants';
 
-const ReportResponded = ({ visible, onClose }) => {
+const ReportRespond = ({ visible, onClose }) => {
     const handleDetails = () => {}
     return (
         <Modal
@@ -24,11 +24,11 @@ const ReportResponded = ({ visible, onClose }) => {
             animationOutTiming={500} 
         >
             <SafeAreaView className="w-full h-full absolute top-[20%] left-[5%]">
-                {/* Report Received Modal */}
+                {/* Report Responded Modal */}
                 <View className="bg-white items-center justify-center h-[55%] w-[90%]">
-                    {/* Close Button */}
+                    {/* Details Button */}
                     <View className="absolute top-5 right-6 flex-row gap-6 items-center">
-                    <TouchableOpacity onPress={handleClose}>
+                    <TouchableOpacity onPress={handleDetails}>
                         <Image
                         source={icons.moreDetails}
                         tintColor="#000000"
@@ -36,8 +36,8 @@ const ReportResponded = ({ visible, onClose }) => {
                         resizeMode="contain"
                         />
                     </TouchableOpacity>
-                    {/* Details Button */}
-                    <TouchableOpacity onPress={handleDetails}>
+                    {/* Close Button */}
+                    <TouchableOpacity onPress={onClose}>
                         <Image
                         source={icons.close}
                         tintColor={"#000000"}
@@ -54,19 +54,19 @@ const ReportResponded = ({ visible, onClose }) => {
                         resizeMode="contain"
                     />
                     </View>
-                    {/* Received Icon */}
+                    {/* Responded Icon */}
                     <View className="absolute top-[40%] items-center">
                     <Image
-                        source={icons.received}
+                        source={icons.responded}
                         tintColor={"#57b378"}
                         className="w-[100px] h-[100px]"
                         resizeMode="contain"
                     />
                     </View>
-                    {/* Report Received */}
+                    {/* Responder Departure */}
                     <View className="absolute bottom-[18%]">
                     <Text className="font-pbold text-2xl text-center text-black">
-                        REPORT {"\n"} RECEIVED
+                        RESPONDERS{"\n"}DEPARTURE
                     </Text>
                     </View>
                 </View>
@@ -75,4 +75,4 @@ const ReportResponded = ({ visible, onClose }) => {
     )
 }
 
-export default ReportResponded;
+export default ReportRespond;

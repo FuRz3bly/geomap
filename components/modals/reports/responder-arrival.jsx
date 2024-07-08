@@ -26,9 +26,9 @@ const ResponderArrival = ({ visible, onClose }) => {
             <SafeAreaView className="w-full h-full absolute top-[20%] left-[5%]">
                 {/* Responder Arrival Modal */}
                 <View className="bg-white items-center justify-center h-[55%] w-[90%]">
-                    {/* Close Button */}
+                    {/* Details Button */}
                     <View className="absolute top-5 right-6 flex-row gap-6 items-center">
-                    <TouchableOpacity onPress={handleClose}>
+                    <TouchableOpacity onPress={handleDetails}>
                         <Image
                         source={icons.moreDetails}
                         tintColor="#000000"
@@ -36,8 +36,8 @@ const ResponderArrival = ({ visible, onClose }) => {
                         resizeMode="contain"
                         />
                     </TouchableOpacity>
-                    {/* Details Button */}
-                    <TouchableOpacity onPress={handleDetails}>
+                    {/* Close Button */}
+                    <TouchableOpacity onPress={onClose}>
                         <Image
                         source={icons.close}
                         tintColor={"#000000"}

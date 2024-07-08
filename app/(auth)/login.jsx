@@ -125,7 +125,7 @@ export default function Login() {
                       <View className="justify-center pt-4 flex-row gap-1">
                           <Link href="/user-registration">
                               <Text className="text-md text-white font-psemibold">Don't have account?</Text>
-                              <Text className="text-md font-pbold text-secondary">{" "}Sign Up</Text>
+                              <Text className="text-md font-pbold text-highlight">{" "}Sign Up</Text>
                           </Link>
                       </View>
                     </View>

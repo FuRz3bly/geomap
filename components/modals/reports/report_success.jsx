@@ -22,7 +22,7 @@ const ReportSuccess = ({ visible, onClose }) => {
             animationIn="fadeInUp"
             animationOut="fadeOutDown"
             animationInTiming={400}
-            animationOutTiming={500} 
+            animationOutTiming={500}
         >
             <SafeAreaView className="w-full h-full absolute top-[20%] left-[5%]">
                 {/* Report Successful Modal */}

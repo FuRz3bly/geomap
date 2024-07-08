@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { TextProps, GestureResponderEvent } from 'react-native';
 
 export namespace ExpoRouter {
-  type StaticRoutes = `/` | `/(auth)` | `/_sitemap` | `/home/details/about-us` | `/home/details/help` | `/home/details/profile` | `/home/geolocation/map-c` | `/home/geolocation/map-r` | `/home/report/finish-report` | `/home/report/photo-report` | `/home/report/prelim-report` | `/home/settings/settings` | `/login` | `/register/community/signup-image` | `/register/community/signup-personal` | `/register/community/signup-verification` | `/register/responder/signup-image` | `/register/responder/signup-personal` | `/register/responder/signup-verification` | `/user-registration`;
+  type StaticRoutes = `/` | `/(auth)` | `/_sitemap` | `/home/details/about-us` | `/home/details/help` | `/home/details/profile` | `/home/geolocation/map-c` | `/home/geolocation/map-r` | `/home/report/finish-report` | `/home/report/photo-report` | `/home/report/prelim-report` | `/home/report/report-details` | `/home/settings/settings` | `/login` | `/register/community/signup-image` | `/register/community/signup-personal` | `/register/community/signup-verification` | `/register/responder/signup-image` | `/register/responder/signup-personal` | `/register/responder/signup-verification` | `/user-registration`;
   type DynamicRoutes<T extends string> = `/search/${SingleRoutePart<T>}`;
   type DynamicRouteTemplate = `/search/[query]`;
 

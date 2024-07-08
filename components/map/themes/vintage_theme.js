@@ -1,4 +1,4 @@
-const retroMode = [
+const vintage_theme = [
 {
     "elementType": "geometry",
     "stylers": [
@@ -214,4 +214,4 @@ const retroMode = [
 }
 ];
 
-export default retroMode
+export default vintage_theme

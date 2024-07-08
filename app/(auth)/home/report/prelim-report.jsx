@@ -215,7 +215,7 @@ const PrelimReport = () => {
   }
 
   return (
-    <SafeAreaView className="bg-primary h-full w-full">
+    <SafeAreaView className="bg-primary h-[120%] w-full">
       {/* Back Button */}
       <View className="absolute left-0 top-6 py-3 pl-2 z-20">
         <TouchableOpacity onPress={backHandle}>
@@ -237,7 +237,7 @@ const PrelimReport = () => {
         <View className="items-center">
           <Text className="text-4xl text-primary text-semibold font-pbold pt-10 pb-3">PRELIMINARY REPORT</Text>
         </View>
-        <View className="absolute inset-0 left-6 top-32 bg-primary h-1 w-[88%] items-center"></View>
+        <View className="absolute inset-0 left-6 bottom-[25.5%] bg-primary h-1 w-[88%] items-center"></View>
         {/* Page Indicators */}
         <View className="flex-row gap-40 items-center justify-center bottom-0">
           <View className="bg-white border-primary border-double border-4 h-4 w-4 rounded-full justify-center items-center">
@@ -251,7 +251,7 @@ const PrelimReport = () => {
 
       <ScrollView className="h-full">
         {/* Spacing Top */}
-        <View className="pt-44 bg-white" />
+        <View className="pt-[50%] bg-white" />
 
         {/* Dropdown Options Container */}
         <View className="bg-white w-full h-full px-5">

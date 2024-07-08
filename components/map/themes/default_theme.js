@@ -1,4 +1,4 @@
-const defaultMode = [
+const default_theme = [
     [
         {
           "featureType": "poi",
@@ -37,4 +37,4 @@ const defaultMode = [
       ]
 ];
 
-export default defaultMode
+export default default_theme

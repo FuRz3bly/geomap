@@ -1,4 +1,4 @@
-const nightMode = [
+const night_theme = [
     {
       "elementType": "geometry",
       "stylers": [
@@ -160,4 +160,4 @@ const nightMode = [
     }
   ];
 
-  export default nightMode
+  export default night_theme

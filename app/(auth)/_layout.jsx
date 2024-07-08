@@ -45,18 +45,6 @@ const AuthLayout = () => {
             }}
           />
           <Stack.Screen 
-            name="register/responder/signup-image"
-            options={{
-              headerShown: false
-            }}
-          />
-          <Stack.Screen 
-            name="register/responder/signup-verification"
-            options={{
-              headerShown: false
-            }}
-          />
-          <Stack.Screen 
             name="home/geolocation/map-c"
             options={{
               headerShown: false
@@ -88,6 +76,12 @@ const AuthLayout = () => {
           />
           <Stack.Screen 
             name="home/settings/settings"
+            options={{
+              headerShown: false
+            }}
+          />
+          <Stack.Screen 
+            name="home/report/report-details"
             options={{
               headerShown: false
             }}

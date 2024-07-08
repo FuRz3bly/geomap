@@ -7,7 +7,7 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import { icons } from '../../../../constants'
-import Menu from '../../../../components/modals/menu/menu-c'
+import Menu from '../../../../components/header/modals/menu-c'
 import { getReports } from '../../../../constants/reports/static'
 
 export default function Map() {

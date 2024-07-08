@@ -1,4 +1,4 @@
-const waspMode = [
+const wasp_theme = [
     {
         "featureType": "all",
         "elementType": "labels",
@@ -262,4 +262,4 @@ const waspMode = [
     }
 ]
 
-export default waspMode
+export default wasp_theme

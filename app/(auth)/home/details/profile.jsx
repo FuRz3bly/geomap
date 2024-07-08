@@ -5,9 +5,6 @@ import { icons } from "../../../../constants"
 import { useUser } from '../../../../constants/users/UserContext'
 import { StatusBar } from 'expo-status-bar';
 
-// Import Modals
-import MenuC from '../../../../components/modals/menu/menu-c'
-
 const Profile = () => {
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'long', day: '2-digit' };
@@ -26,33 +23,11 @@ const Profile = () => {
   }
 
   return (
-    <SafeAreaView className="bg-white h-full w-full items-center">
-      {/* Modals Container */}
-      <View className="absolute">
-        <MenuC visible={isMenuVisible} onClose={toggleMenu}></MenuC>
-      </View>
-      {/* Header Container */}
-      <View className="absolute inset-0 top-0 z-20 bg-primary w-full h-28 justify-center items-center flex-row">
-        {/* Menu Button */}
-        <View className="absolute top-[45%] left-[5%]">
-          <TouchableOpacity onPress={() => setMenuVisible(!isMenuVisible)}>
-            <Image 
-              tintColor="#ffffff"
-              source={icons.menu}
-              className="w-10 h-10"
-              resizeMode='contain'
-            />
-          </TouchableOpacity>
-        </View>
-        {/* Profile Title */}
-        <View className="absolute top-[50%] inset-0">
-          <Text className="text-2xl font-psemibold text-white">Profile</Text>
-        </View>
-      </View>
+    <SafeAreaView className="bg-white h-[110%] w-full items-center">
       {/* Header Style */}
-      <View className="absolute -top-[36%] inset-0 -z-10 w-[590px] h-[500px] bg-primary rounded-full" />
+      <View className="absolute -top-[33%] inset-0 -z-10 w-[590px] h-[500px] bg-primary rounded-full" />
       {/* Profile Icon */}
-      <View className="absolute top-[14%] inset-0">
+      <View className="absolute top-[10%] inset-0">
         <View className="w-32 h-32 items-center justify-center bg-white rounded-full border-8 border-primary">
           <Image 
             tintColor="#57b378"
@@ -65,7 +40,7 @@ const Profile = () => {
       {/* Body Container */}
       {currentUser ? (
         <>
-          <View className="absolute top-[33%] inset-0 w-full">
+          <View className="absolute top-[28%] inset-0 w-full">
             {/* Fullname = First, Middle and Lastname */}
             <View className="left-[25%] py-4">
               <Text className="text-lg font-pregular text-white-200">

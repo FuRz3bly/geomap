@@ -1,6 +1,5 @@
 const amenities_static = [
     {
-        id: 0,
         name: "Sabang",
         address: "Governor's Dr, Naic, Cavite",
         lat: 14.31378924620041,
@@ -9,7 +8,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 1,
         name: "San Roque",
         address: "Governor's Dr, Naic, Cavite",
         lat: 14.310778993357642,
@@ -18,7 +16,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 2,
         name: "Balsahan",
         address: "Rizal St, Naic, Cavite",
         lat: 14.319885083732254,
@@ -27,7 +24,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 3,
         name: "Bancaan",
         address: "Naic, Cavite",
         lat: 14.319018061785732,
@@ -36,7 +32,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 4,
         name: "Bucana Malaki",
         address: "Naic, Cavite",
         lat: 14.324868177338466,
@@ -45,7 +40,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 5,
         name: "Bucana Sasahan",
         address: "Naic, Cavite",
         lat: 14.323050090988774,
@@ -54,7 +48,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 6,
         name: "Calubcob",
         address: "Naic, Cavite",
         lat: 14.297690227012781,
@@ -63,7 +56,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 7,
         name: "Capt. C. Nazareno",
         address: "Captain Ciriaco Nazareno St, Naic, Cavite",
         lat: 14.315789180369425,
@@ -72,7 +64,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 8,
         name: "Gombalza",
         address: "Captain Yoyo Jocson, Naic, Cavite",
         lat: 14.318693209303039,
@@ -81,7 +72,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 9,
         name: "Halang",
         address: "Indang Road, Naic, Cavite",
         lat: 14.293622911952223,
@@ -90,7 +80,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 10,
         name: "Ibayo Estacion",
         address: "Tramo, Naic, Cavite",
         lat: 14.323491269978128,
@@ -99,7 +88,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 11,
         name: "Ibayo Silangan",
         address: "P. Poblete St, Naic, Cavite",
         lat: 14.32229580422758,
@@ -108,7 +96,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 12,
         name: "Kanluran",
         address: "Naic, Cavite",
         lat: 14.317174143803737,
@@ -117,7 +104,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 13,
         name: "Latoria",
         address: "Naic, Cavite",
         lat: 14.32150071492731,
@@ -126,7 +112,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 14,
         name: "Labac",
         address: "Naic, Cavite",
         lat: 14.312642254742446,
@@ -135,7 +120,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 15,
         name: "Malainen Bago",
         address: "Governor's Dr, Naic, Cavite",
         lat: 14.307952084734042,
@@ -144,7 +128,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 16,
         name: "Malainen Luma",
         address: "Malainen Luma, Naic, Cavite",
         lat: 14.270560254456324,
@@ -153,7 +136,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 17,
         name: "Makina",
         address: "Zamora Street, Naic, Cavite",
         lat: 14.31449176466267,
@@ -162,7 +144,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 18,
         name: "Molino",
         address: "Naic, Cavite",
         lat: 14.279816875576833,
@@ -171,7 +152,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 19,
         name: "Munting Mapino",
         address: "Munting Mapino Rd, Naic, Cavite",
         lat: 14.333815818529878,
@@ -180,7 +160,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 20,
         name: "Muzon",
         address: "A. Bonifacio St, Naic, Cavite",
         lat: 14.292383267252275,
@@ -189,7 +168,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 21,
         name: "Palangue 2 & 3",
         address: "Indang Road, Naic, Cavite",
         lat: 14.272931155838135,
@@ -198,7 +176,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 22,
         name: "Palangue Central",
         address: "Indang Road, Naic, Cavite",
         lat: 14.281564942343842,
@@ -207,7 +184,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 23,
         name: "Santulan",
         address: "Captain Ciriaco Nazareno St, Naic, Cavite",
         lat: 14.314417118667013,
@@ -216,7 +192,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 24,
         name: "Sapa",
         address: "Naic, Cavite",
         lat: 14.32050354778266,
@@ -225,7 +200,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 25,
         name: "Timalan Balsahan",
         address: "Timalan Balsahan, Naic, Cavite",
         lat: 14.343445386126227,
@@ -234,7 +208,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 26,
         name: "Timalan Concepcion",
         address: "Timalan Conception, Naic, Cavite",
         lat: 14.336226044097156,
@@ -243,7 +216,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 27,
         name: "Naic Municipal",
         address: "Governor's Dr, Naic, Cavite",
         lat: 14.322404058054554,
@@ -253,7 +225,6 @@ const amenities_static = [
         type: "Police Station"
     },
     {
-        id: 28,
         name: "Naic Police Main Sub-Station",
         address: "Governor's Dr, Naic, Cavite",
         lat: 14.322689593362444,
@@ -262,7 +233,6 @@ const amenities_static = [
         type: "Police Station"
     },
     {
-        id: 29,
         name: "Naic Police Sub-Station 1",
         address: "South Morning View, Naic, Cavite",
         lat: 14.34069786580624,
@@ -271,7 +241,6 @@ const amenities_static = [
         type: "Police Station"
     },
     {
-        id: 30,
         name: "Naic Police Sub-Station 2",
         address: "Tramo, Naic, Cavite",
         lat: 14.326970874991295,
@@ -280,7 +249,6 @@ const amenities_static = [
         type: "Police Station"
     },
     {
-        id: 31,
         name: "Naic Police Sub-Station 3",
         address: "Naic - Indang Rd, Naic, Cavite",
         lat: 14.29039153277153,
@@ -289,7 +257,6 @@ const amenities_static = [
         type: "Police Station"
     },
     {
-        id: 32,
         name: "Naic",
         address: "Convento Br, Naic, Cavite",
         lat: 14.322621455324908,
@@ -299,7 +266,6 @@ const amenities_static = [
         type: "Fire Station"
     },
     {
-        id: 33,
         name: "Naic MDRRMO",
         address: "Antero Soriano Highway, Naic, Cavite",
         lat: 14.322543325687302,
@@ -309,7 +275,6 @@ const amenities_static = [
         type: "Government Office"
     },
     {
-        id: 34,
         name: "Poblacion 3",
         address: "De Ocampo St, Indang, Cavite",
         lat: 14.1968,
@@ -318,7 +283,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 35,
         name: "Poblacion 2",
         address: "San Miguel St, Indang, Cavite",
         lat: 14.1968,
@@ -327,7 +291,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 36,
         name: "Poblacion 1",
         address: "Indang - Trece Martires Road, Indang, Cavite",
         lat: 14.1956,
@@ -336,7 +299,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 37,
         name: "Indang",
         address: "Indang, Cavite",
         lat: 14.2028,
@@ -345,7 +307,6 @@ const amenities_static = [
         type: "Municipal Hall"
     },
     {
-        id: 38,
         name: "Indang Municipal",
         address: "Indang, Cavite",
         lat: 14.2030,
@@ -354,7 +315,6 @@ const amenities_static = [
         type: "Police Station"
     },
     {
-        id: 39,
         name: "Poblacion 4",
         address: "Dimabiling Street, Indang, Cavite",
         lat: 14.2004,
@@ -363,7 +323,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 40,
         name: "Kaytapos",
         address: "Trece Martires - Indang Rd, Indang, Cavite",
         lat: 14.1956,
@@ -372,7 +331,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 41,
         name: "Bancod",
         address: "Brgy. Fidel Street, Indang, Cavite",
         lat: 14.2097,
@@ -381,7 +339,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 42,
         name: "Agus-os",
         address: "Indang - Naic Road, Indang, Cavite",
         lat: 14.2265,
@@ -390,7 +347,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 43,
         name: "Mataas na Lupa",
         address: "Trece Martires - Indang Rd, Indang, Cavite",
         lat: 14.2313,
@@ -399,7 +355,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 44,
         name: "Harasan",
         address: "Barangay Harasan, Indang, Cavite",
         lat: 14.1598,
@@ -408,7 +363,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 45,
         name: "Tambo Ilaya",
         address: "Alfonso - Indang Road, Indang, Cavite",
         lat: 14.1816,
@@ -417,7 +371,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 46,
         name: "Lumampong Balagbag",
         address: "1002 Magsaysay, Road, Indang, Cavite",
         lat: 14.1738,
@@ -426,7 +379,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 47,
         name: "Tambo Balagbag",
         address: "Indang, Cavite",
         lat: 14.1848,
@@ -435,7 +387,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 48,
         name: "Daine II",
         address: "Indang, Cavite",
         lat: 14.1897,
@@ -444,7 +395,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 49,
         name: "Mahabang Kahoy Cerca",
         address: "Dama De Noche Street, Indang, Cavite",
         lat: 14.1725,
@@ -453,7 +403,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 50,
         name: "Buna Lejos II",
         address: "Magdalo St, Indang, Cavite",
         lat: 14.1757,
@@ -462,7 +411,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 51,
         name: "Buna Lejos I",
         address: "Magtanggol St, Indang, Cavite",
         lat: 14.1734,
@@ -471,7 +419,6 @@ const amenities_static = [
         type: "Barangay Hall"
     },
     {
-        id: 52,
         name: "Indang Tourist Police Station",
         address: "Poblacion 1, Indang, Cavite, San Gregorio St",
         lat: 14.1957,
@@ -481,7 +428,6 @@ const amenities_static = [
         type: "Police Station"
     },
     {
-        id: 53,
         name: "Agus-os",
         address: "Del Pilar Corner Rizal Street, Alfonso, Cavite",
         lat: 14.1387,
@@ -491,7 +437,6 @@ const amenities_static = [
         type: "Police Station"
     },
     {
-        id: 54,
         name: "Indang",
         address: "Naic - Indang Rd, Indang, Cavite",
         lat: 14.2012,
@@ -500,14 +445,99 @@ const amenities_static = [
         type: "Fire Station"
     },
     {
-        id: 55,
         name: "Indang MDRRMO",
         address: "De Ocampo St, Indang, Cavite",
         lat: 14.1966,
         lon: 120.8761,
         description: "government office",
         type: "Government Office"
-    }    
+    },
+    {
+        name: "Anahaw I",
+        address: "Silang, Cavite",
+        lat: 14.2729,
+        lon: 120.9940,
+        description: ["local government office", "wheelchair"],
+        type: "Barangay Hall"
+    },
+    {
+        name: "Anahaw II",
+        address: "Anahaw St, Silang, Cavite",
+        lat: 14.2722,
+        lon: 120.9967,
+        description: "local government office",
+        type: "Barangay Hall"
+    },
+    {
+        name: "Acacia",
+        address: "Silang, Cavite",
+        lat: 14.2729,
+        lon: 120.9940,
+        number: "0977 647 0800",
+        description: ["local government office", "wheelchair"],
+        type: "Barangay Hall"
+    },
+    {
+        name: "Banaba",
+        address: "Silang, Cavite",
+        lat: 14.2838,
+        lon: 120.9949,
+        description: ["local government office", "wheelchair"],
+        type: "Barangay Hall"
+    },
+    {
+        name: "Narra I",
+        address: "Silang, Cavite",
+        lat: 14.2798,
+        lon: 120.9952,
+        description: "local government office",
+        type: "Barangay Hall"
+    },
+    {
+        name: "San Gabriel",
+        address: "San Sebastian St, GMA, Cavite",
+        lat: 14.2860,
+        lon: 121.0019,
+        number: "(046) 972 0811",
+        description: ["local government office", "wheelchair"],
+        type: "Barangay Hall"
+    },
+    {
+        name: "Bulihan",
+        address: "Old Bulihan Rd, Silang, Cavite",
+        lat: 14.2807,
+        lon: 120.9974,
+        description: "local government office",
+        type: "Barangay Hall"
+    },
+    {
+        name: "General Mariano Alvarez",
+        address: "Congressional Rd, GMA, Cavite",
+        lat: 14.2957,
+        lon: 121.0067,
+        email: "https://genmarianoalvarez.gov.ph/",
+        phone: "(046) 460 4088",
+        description: ["government office", "wheelchair"],
+        type: "Municipal Hall"
+    },
+    {
+        name: "Poblacion 1",
+        address: "Congressional Rd, Poblacion 1, GMA, Cavite",
+        lat: 14.2952,
+        lon: 121.0062,
+        phone: "(046) 972 2051",
+        description: ["local government office", "wheelchair"],
+        type: "Barangay Hall"
+    },
+    {
+        name: "BFP R4A Dasmarinas City",
+        address: "Central Market Ave, Dasmariñas, Cavite",
+        lat: 14.322392126045031,
+        lon: 120.9446506225637,
+        phone: ["(046) 884 6131", "09924487857", "09953369534"],
+        description: "fire station",
+        type: "Fire Station"
+    }
 ];
 
 export default amenities_static;

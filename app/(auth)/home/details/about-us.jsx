@@ -1,12 +1,13 @@
 import { View, Text } from 'react-native'
 import React from 'react'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 const AboutUs = () => {
   return (
-    <View>
-      <Text>AboutUs</Text>
-    </View>
+    <SafeAreaView className="bg-white h-[110%] w-full items-center justify-center">
+      <View><Text className="font-pbold text-3xl">AboutUs</Text></View>
+    </SafeAreaView>
   )
 }
 
-export default AboutUs
+export default AboutUs;

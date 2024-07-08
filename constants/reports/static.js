@@ -1,4 +1,4 @@
-const reports = [
+let reports = [
     {
         id: 123456789,
         status: "waiting",
@@ -654,5 +654,5 @@ const reports = [
 export const getReports = () => reports;
 
 export const addReport = (newReport) => {
-    reports.push(newReport)
-}
+    reports.push(newReport);
+};
