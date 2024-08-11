@@ -22,7 +22,19 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+<<<<<<< Updated upstream
       }
+=======
+      },
+      "package": "com.geomap",
+      "googleServicesFile": "./google-services.json",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBaFBUQbNHfb-hsrf5DiIVi9G_Lxf-r_Js"
+        }
+      },
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
+>>>>>>> Stashed changes
     },
     "web": {
       "favicon": "./assets/favicon.png"
