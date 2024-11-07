@@ -2,9 +2,10 @@
   "expo": {
     "name": "GEOMAP",
     "slug": "geomap",
-    "version": "1.2.0",
+    "version": "1.4.35",
+    "sdkVersion": "51.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/geomap-icon.png",
     "scheme": "geomap",
     "userInterfaceStyle": "automatic",
     "splash": {
@@ -17,16 +18,25 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icons/geomap-icon-1.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/geomap-icon-white.png",
+        "backgroundColor": "#57b378"
       },
       "package": "com.geomap",
+      "googleServicesFile": "./google-services.json",
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyBaFBUQbNHfb-hsrf5DiIVi9G_Lxf-r_Js"
         }
       },
-      "permissions": ["ACCESS_FINE_LOCATION"]
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "INTERNET"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -36,13 +46,37 @@
     "plugins": [
       "expo-router",
       [
-        "expo-image-picker", {
+        "expo-image-picker",
+        {
           "photoPermission": "Allow GEOMAP to access your photos"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow GEOMAP to access your camera",
+          "microphonePermission": "Allow GEOMAP to access your microphone",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-notifications", {
+          "icon": "./assets/images/adaptive-icon.png",
+          "color": "#ffffff",
+          "mode": "production"
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "c9af28da-195f-4e1c-8297-8a3a479c7fcb"
+      }
     }
   }
 }
