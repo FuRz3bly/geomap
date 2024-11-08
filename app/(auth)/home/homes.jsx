@@ -319,7 +319,7 @@ const HomeScreen = () => {
     }
     
     return (
-        <SafeAreaView className="w-full h-full bg-primary">
+        <SafeAreaView className="w-full h-full bg-white">
             {/* Modals */}
             <Success visible={isWelcomeVisible} onClose={closeModal} title={'Login Successful!'} description={`Welcome ${name} to GEOMAP`} />
             <Failed visible={isFailedVisible} onClose={closeFModal} title={failedForm.title} description={failedForm.description} />
@@ -499,9 +499,9 @@ const HomeScreen = () => {
                 ) : title === 'home/documents' ? (
                     <FormScreen changePage={handleChangePage} backPage={handleBackButton} status={setStatus} savings={setStatusSuccess} loadings={setStatusLoading} />
                 ) : title === 'home/settings' ? (
-                    <SettingsScreen />
+                    <SettingsScreen changePage={handleChangePage} backPage={handleBackButton} />
                 ) : title === 'home/helps' ? (
-                    <HelpScreen /> 
+                    <HelpScreen changePage={handleChangePage} backPage={handleBackButton}/> 
                 ) : (
                     <View className="w-full h-full bg-white items-center">
                         {/* Quick Actions */}
@@ -512,6 +512,7 @@ const HomeScreen = () => {
                             <Text className="text-white font-pregular text-base px-4 -bottom-[10%]">{'Quick Actions'}</Text>
                             <View className="w-full h-[70%] absolute -bottom-[30%]">
                                 <ScrollView horizontal showsHorizontalScrollIndicator={false} className="w-full h-full" contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
+                                    {/* Resolve a Report Action */}
                                     <View className="w-48 h-[90%] bg-white rounded-lg shadow-lg shadow-black mx-3 overflow-hidden">
                                         <View className="w-[20%] h-[35%] absolute top-[6%] left-[2%] items-center justify-center">
                                             <Image 
@@ -526,6 +527,7 @@ const HomeScreen = () => {
                                             <Text className="text-slate-400 font-pregular text-xs">{translate("structural_fire")}</Text>
                                         </View>
                                     </View>
+                                    {/* Report structural_fire */}
                                     <View className="w-48 h-[90%] bg-white rounded-lg shadow-lg shadow-black mr-4 overflow-hidden">
                                         <View className="w-[20%] h-[35%] absolute top-[6%] left-[2%] items-center justify-center">
                                             <Image 
@@ -540,6 +542,7 @@ const HomeScreen = () => {
                                             <Text className="text-slate-400 font-pregular text-xs">{translate("structural_fire")}</Text>
                                         </View>
                                     </View>
+                                    {/* Find Nearest Amenity Near Me */}
                                     <View className="w-48 h-[90%] bg-white rounded-lg shadow-lg shadow-black mr-6">
                                         <View className="w-[20%] h-[35%] absolute top-[6%] left-[2%] items-center justify-center">
                                             <Image 

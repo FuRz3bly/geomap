@@ -201,6 +201,21 @@ import barangayReportMarker from "../assets/icons/report-barangay-marker.png";
 import barangayReportMarkerSC from "../assets/icons/report-barangay-marker-select.png";
 import barangayMarkerN from "../assets/icons/barangay-marker-nearest.png";
 
+import reportPoster from "../assets/icons/report-poster.png";
+import mapPoster from "../assets/icons/map-poster.png";
+import soundOn from "../assets/icons/sound-on.png";
+import soundOff from "../assets/icons/sound-off.png";
+import cameraOff from "../assets/icons/camera-off.png";
+import mediaOff from "../assets/icons/media.png";
+import locationOff from "../assets/icons/location-off.png";
+import notificationOn from "../assets/icons/notification-on.png";
+import notificationOff from "../assets/icons/notification-off.png";
+import faq from "../assets/icons/faq.png";
+import support from "../assets/icons/support.png";
+import sendFeedback from "../assets/icons/send-feedback.png";
+import information from "../assets/icons/information.png";
+import aboutUsOff from "../assets/icons/about-us-off.png";
+
 export default {
   logo,
   profile,
@@ -378,5 +393,19 @@ export default {
   fireReportMarkerSC,
   policeReportMarkerSC,
   disasterReportMarkerSC,
-  barangayReportMarkerSC
+  barangayReportMarkerSC,
+  reportPoster,
+  mapPoster,
+  soundOn,
+  soundOff,
+  cameraOff,
+  mediaOff,
+  locationOff,
+  notificationOn,
+  notificationOff,
+  faq,
+  support,
+  sendFeedback,
+  information,
+  aboutUsOff
 };
