@@ -1540,12 +1540,6 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
       <Arrival visible={isArrivalVisible} onClose={closeArrivalModal} onProceed={() => changePage('home/details')} report={arrivalForm.report} time={arrivalForm.time} id={arrivalForm.id} user={arrivalForm.user} />
       <Resolved visible={isResolvedVisible} onClose={closeResolvedModal} onProceed={() => changePage('home/details')} report={resolvedForm.report} respo={resolvedForm.respo} />
       <Pins visible={isPinVisible} onClose={closePinModal} onProceed={() => setIsOnDuty(true)} onRequest={handleRequest} user={user}/>
-      {/* Map Hider */}
-      {/* {loading && (
-        <View className="w-full h-full items-center justify-center bg-white z-40">
-          <ActivityIndicator size={'LARGE'} color="#57b378" />
-        </View>
-      )} */}
       {/* Maps Container */}
       <View className={`w-full ${reportInfoVisible && !isIntensity || respoReportInfoVisible ? 'h-[70%]' : amenityInfoVisible && !isIntensity || mapOptions ? 'h-[55%]' : searchInfoVisible || symbolPanelVisible ? 'h-[30%]' : 'h-full'}`}>
         {!isOnDuty ? (

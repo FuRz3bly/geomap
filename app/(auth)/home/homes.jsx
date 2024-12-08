@@ -32,6 +32,10 @@ import HelpScreen from './helps';
 import SettingsScreen from './settings';
 
 // Admin Pages
+import UserScreen from './users';
+import RequestScreen from './requests';
+import AmenityScreen from './amenities';
+import AdminReportScreen from './admin-reports';
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -113,6 +117,7 @@ const HomeScreen = () => {
             newestTimestamp: 0
         },
     });
+    
 
     // Enable LayoutAnimation on Android
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -153,6 +158,91 @@ const HomeScreen = () => {
             },
         });
         setExpandStatus(!expandStatus);
+    };
+
+    // Updated Minutes / Hours / Days / Weeks / Months Ago
+    const formatTimeDifference = (timestamp) => {
+        const now = new Date();
+        const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
+        const diffInMs = now - date;
+        const diffInMinutes = Math.floor(diffInMs / 60000);
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        const diffInDays = Math.floor(diffInHours / 24);
+        const diffInWeeks = Math.floor(diffInDays / 7);
+        const diffInMonths = Math.floor(diffInDays / 30);
+    
+        if (diffInMinutes < 60) {
+            return `${diffInMinutes} minute${diffInMinutes === 1 ? '' : 's'} ago`;
+        } else if (diffInHours < 24) {
+            return `${diffInHours} hour${diffInHours === 1 ? '' : 's'} ago`;
+        } else if (diffInDays < 7) {
+            return `${diffInDays} day${diffInDays === 1 ? '' : 's'} ago`;
+        } else if (diffInWeeks < 4) {
+            return `${diffInWeeks} week${diffInWeeks === 1 ? '' : 's'} ago`;
+        } else {
+            return `${diffInMonths} month${diffInMonths === 1 ? '' : 's'} ago`;
+        }
+    };    
+
+    // Generate Responder Requests Chart Data
+    const prepareChartData = (requests) => {
+        if (!Array.isArray(requests)) {
+          return { labels: [], data: [] };
+        }
+      
+        const dateCountMap = {};
+      
+        requests.forEach(request => {
+          const timestamp = request.createdAt;
+          if (timestamp) {
+            const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
+            const formattedDate = `${date.getMonth() + 1}/${date.getDate()}`;
+            if (dateCountMap[formattedDate]) {
+              dateCountMap[formattedDate]++;
+            } else {
+              dateCountMap[formattedDate] = 1;
+            }
+          }
+        });
+      
+        const labels = Object.keys(dateCountMap);
+        const data = Object.values(dateCountMap);
+      
+        return { labels, data };
+    };
+
+    // Generate Reports Chart Data
+    const prepareReportChartData = (reports) => {
+        if (!Array.isArray(reports)) {
+            return { labels: [], data: [] };
+        }
+
+        const dateCountMap = {};
+
+        reports.forEach(report => {
+            const timestamp = report.report_photos?.[0]?.timestamp;
+
+            if (timestamp) {
+                const date = new Date(timestamp.seconds * 1000 + (timestamp.nanoseconds || 0) / 1000000);
+
+                if (!isNaN(date.getTime())) {
+                    const formattedDate = `${date.getMonth() + 1}/${date.getDate()}`;
+                    dateCountMap[formattedDate] = (dateCountMap[formattedDate] || 0) + 1;
+                }
+            }
+        });
+
+        const sortedDates = Object.keys(dateCountMap).sort((a, b) => {
+            const [aMonth, aDay] = a.split('/').map(Number);
+            const [bMonth, bDay] = b.split('/').map(Number);
+
+            return new Date(2024, bMonth - 1, bDay) - new Date(2024, aMonth - 1, aDay);
+        });
+
+        const labels = sortedDates.slice(0, 7);
+        const data = labels.map(date => dateCountMap[date]);
+
+        return { labels, data };
     };
 
     // Check if user has pending and approved requests
@@ -295,6 +385,161 @@ const HomeScreen = () => {
             clearTimeout(firstToggle);
         };
     }, [expandStatus]);
+
+    // Real-time listener for all tables
+    useEffect(() => {
+        if (isAdmin) {
+            const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+                const users = snapshot.docs.map(doc => doc.data()) || [];
+                let filteredUsers = users;
+    
+                if (typeAdmin === 'amenity') {
+                    const amenityID = user.amenity_id;
+                    const userAddressParts = user.address
+                        .split(',')
+                        .map(part => part.trim().toLowerCase())
+                        .filter(part => part !== 'cavite'); // Exclude 'Cavite' from address parts
+    
+                    filteredUsers = users.filter(user => {
+                        const userAmenityMatch = user.amenity_id === amenityID;
+                        const userAddressMatch = user.address
+                            .split(',')
+                            .map(part => part.trim().toLowerCase())
+                            .filter(part => part !== 'cavite') // Exclude 'Cavite' from address parts
+                            .some(part => userAddressParts.includes(part));
+                        return userAmenityMatch || userAddressMatch;
+                    });
+                }
+    
+                setData(prevData => ({
+                    ...prevData,
+                    users: {
+                        count: filteredUsers.length,
+                        data: filteredUsers,
+                    },
+                }));
+            });
+        
+            const unsubscribeAmenities = onSnapshot(collection(db, 'amenity'), (snapshot) => {
+                const amenities = snapshot.docs.map(doc => doc.data()) || [];
+                let filteredAmenities = amenities;
+    
+                if (typeAdmin === 'amenity') {
+                    const amenityID = user.amenity_id;
+                    const userAddressParts = user.address
+                        .split(',')
+                        .map(part => part.trim().toLowerCase())
+                        .filter(part => part !== 'cavite'); // Exclude 'Cavite' from address parts
+    
+                    filteredAmenities = amenities.filter(amenity => {
+                        const amenityIDMatch = amenity.id === amenityID;
+                        const amenityAddressMatch = amenity.address
+                            .split(',')
+                            .map(part => part.trim().toLowerCase())
+                            .filter(part => part !== 'cavite') // Exclude 'Cavite' from address parts
+                            .some(part => userAddressParts.includes(part));
+                        return amenityIDMatch || amenityAddressMatch;
+                    });
+                }
+
+                const mostRecentKeyDate = filteredAmenities.reduce((latest, amenity) => {
+                    return amenity.key_date && (!latest || amenity.key_date.seconds > latest.seconds) ? amenity.key_date : latest;
+                }, null);
+    
+                setData(prevData => ({
+                    ...prevData,
+                    amenities: {
+                        count: filteredAmenities.length,
+                        data: filteredAmenities,
+                        mostRecentKeyDate
+                    },
+                }));
+            });
+        
+            const unsubscribeReports = onSnapshot(collection(db, 'reports'), (snapshot) => {
+                const reports = snapshot.docs.map(doc => doc.data()) || [];
+                let filteredReports = reports;
+    
+                if (typeAdmin === 'amenity') {
+                    const amenityID = user.amenity_id;
+                    const userAddressParts = user.address
+                        .split(',')
+                        .map(part => part.trim().toLowerCase())
+                        .filter(part => part !== 'cavite'); // Exclude 'Cavite' from address parts
+    
+                    filteredReports = reports.filter(report => {
+                        const responderAmenityIDMatch = report.responder?.amenity?.id === amenityID;
+                        const reportAddressMatch = report.report_address
+                            .split(',')
+                            .map(part => part.trim().toLowerCase())
+                            .filter(part => part !== 'cavite') // Exclude 'Cavite' from address parts
+                            .some(part => userAddressParts.includes(part));
+                        const responderAmenityAddressMatch = report.responder?.amenity?.address
+                            .split(',')
+                            .map(part => part.trim().toLowerCase())
+                            .filter(part => part !== 'cavite') // Exclude 'Cavite' from address parts
+                            .some(part => userAddressParts.includes(part));
+    
+                        return responderAmenityIDMatch || reportAddressMatch || responderAmenityAddressMatch;
+                    });
+                }
+
+                const mostRecentReportDate = filteredReports.reduce((latest, report) => {
+                    const photoTimestamp = report.report_photos?.[0]?.timestamp;
+                    return photoTimestamp && (!latest || photoTimestamp.seconds > latest.seconds)
+                        ? photoTimestamp
+                        : latest;
+                }, null);
+
+                // Prepare chart data
+                const chartData = prepareReportChartData(filteredReports);
+    
+                setData(prevData => ({
+                    ...prevData,
+                    reports: {
+                        count: filteredReports.length,
+                        data: filteredReports,
+                        mostRecentReportDate,
+                        chartData
+                    },
+                }));
+            });
+        
+            const unsubscribeRequests = onSnapshot(collection(db, 'request'), (snapshot) => {
+                const requests = snapshot.docs.map(doc => doc.data()) || [];
+                let filteredRequests = requests;
+
+                if (typeAdmin === 'amenity') {
+                    const amenityID = user.amenity_id
+                    filteredRequests = requests.filter(request => request.amenity_id === amenityID);
+                }
+                const newestRequestTimestamp = filteredRequests.reduce((latest, request) => {
+                    return request.createdAt.seconds > latest.seconds ? request.createdAt : latest;
+                }, filteredRequests[0]?.createdAt || { seconds: 0 });
+
+                const chartData = prepareChartData(filteredRequests);
+                setData(prevData => ({
+                    ...prevData,
+                    requests: {
+                    count: filteredRequests.length,
+                    data: filteredRequests,
+                    chartData: chartData,
+                    newestTimestamp: newestRequestTimestamp, // Store the newest timestamp
+                    },
+                }));
+            });
+        
+            // Cleanup listeners on component unmount
+            return () => {
+                unsubscribeUsers();
+                unsubscribeAmenities();
+                unsubscribeReports();
+                unsubscribeRequests();
+            };
+        } else {
+          return;
+        }
+    }, [isAdmin, typeAdmin]);
 
     // Disable the back button action when the component is mounted
     useEffect(() => {
@@ -482,6 +727,11 @@ const HomeScreen = () => {
     const handleOK = () => {
         return;
     };
+
+    const { chartData, newestTimestamp } = data.requests;
+    const reportChartData = data.reports.chartData;
+    const activeUsers = data?.users?.data?.filter(user => user.session_token !== null) ?? [];
+    const pendingRequests = data?.requests?.data?.filter(request => request.status === 'pending') ?? [];
     
     return (
         <SafeAreaView className="w-full h-full bg-white">
@@ -726,11 +976,270 @@ const HomeScreen = () => {
                 ) : title === 'home/settings' ? (
                     <SettingsScreen changePage={handleChangePage} backPage={handleBackButton} />
                 ) : title === 'home/helps' ? (
-                    <HelpScreen changePage={handleChangePage} backPage={handleBackButton}/> 
+                    <HelpScreen changePage={handleChangePage} backPage={handleBackButton}/>
+                ) : title === 'home/users' ? (
+                    <UserScreen data={data?.users?.data} changePage={handleChangePage} backPage={handleBackButton} />
+                ) : title === 'home/requests' ? (
+                    <RequestScreen data={data?.requests?.data} changePage={handleChangePage} backPage={handleBackButton} />
+                ) : title === 'home/amenities' ? (
+                    <AmenityScreen data={data?.amenities?.data} changePage={handleChangePage} backPage={handleBackButton} />
+                ) : title === 'home/admin-reports' ? (
+                    <AdminReportScreen data={data?.reports?.data} changePage={handleChangePage} backPage={handleBackButton} />
                 ) : (
                     <View className="w-full h-full items-center justify-center">
                         {isAdmin ? (
                             <View className="w-full h-full bg-white items-center">
+                                <View className="w-full h-full bg-white top-[4%] items-center">
+                                    <ScrollView showsVerticalScrollIndicator={true} className="w-full h-full" contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
+                                        {/* Dashboard Totals */}
+                                        <View className="w-[95%] h-32 mt-8">
+                                            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="w-full h-full" contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
+                                                {/* Total Users */}
+                                                <View className="w-64 h-full flex-row items-center justify-start mr-2">
+                                                    {/* Users Count */}
+                                                    <View className="w-full h-[90%]">
+                                                        <TouchableHighlight className="w-full h-full bg-white border-[#FB5012] border-[1px] rounded-3xl overflow-hidden items-center" underlayColor={'#fffd99'} onPress={() => handleChangePage('home/users')}>
+                                                            <>
+                                                                {/* Total Users */}
+                                                                <View className="w-full h-[70%] flex-row">
+                                                                    {/* Total User Count */}
+                                                                    <View className="w-[60%] h-full justify-center pl-4">
+                                                                        <Text className="text-white-500 font-pmedium text-base">{"Total Users"}</Text>
+                                                                        <Text className="text-black font-psemibold text-xl">{data?.users?.count}</Text>
+                                                                    </View>
+                                                                    {/* User Icons */}
+                                                                    <View className="w-[40%] h-full items-center justify-center pl-4">
+                                                                        <View className="w-14 h-14 bg-[#FB5012] items-center justify-center rounded-xl">
+                                                                            <Image
+                                                                                tintColor="#ffffff"
+                                                                                source={icons.aboutUs}
+                                                                                className="w-[50%] h-[50%]"
+                                                                                resizeMode='contain'
+                                                                            />
+                                                                        </View>
+                                                                    </View>
+                                                                </View>
+                                                                <View className="w-full h-[1px] bg-[#FB5012]" />
+                                                                {/* Active Users */}
+                                                                <View className="w-full h-[30%] pl-4 justify-center bg-[#FB5012]">
+                                                                    <Text className="text-white font-rbase text-sm pb-1">
+                                                                        <Text className="font-rmedium">{`⬤  ${activeUsers?.length} `}</Text>
+                                                                        {`${activeUsers?.length > 0 ? 'online users' : 'online user'} `}
+                                                                    </Text>
+                                                                </View>
+                                                            </>
+                                                        </TouchableHighlight>
+                                                    </View>
+                                                </View>
+                                                {/* Total Requests  */}
+                                                <View className="w-64 h-full flex-row items-center justify-start mr-2">
+                                                    {/* Requests Count */}
+                                                    <View className="w-full h-[90%]">
+                                                        <TouchableHighlight className="w-full h-full bg-white border-[#00D8D0] border-[1px] rounded-3xl overflow-hidden items-center" underlayColor={'#fffd99'} onPress={() => handleChangePage('home/requests')}>
+                                                            <>
+                                                                {/* All Requests */}
+                                                                <View className="w-full h-[70%] flex-row">
+                                                                    {/* All Requests Count */}
+                                                                    <View className="w-[60%] h-full justify-center pl-4">
+                                                                        <Text className="text-white-500 font-pmedium text-base">{"Total Requests"}</Text>
+                                                                        <Text className="text-black font-psemibold text-xl">{data?.requests?.count}</Text>
+                                                                    </View>
+                                                                    {/* Requests Icons */}
+                                                                    <View className="w-[40%] h-full items-center justify-center pl-4">
+                                                                        <View className="w-14 h-14 bg-[#00D8D0] items-center justify-center rounded-xl">
+                                                                            <Image
+                                                                                tintColor="#ffffff"
+                                                                                source={icons.request}
+                                                                                className="w-[50%] h-[50%]"
+                                                                                resizeMode='contain'
+                                                                            />
+                                                                        </View>
+                                                                    </View>
+                                                                </View>
+                                                                <View className="w-full h-[1px] bg-[#00D8D0]" />
+                                                                {/* Pending Requests */}
+                                                                <View className="w-full h-[30%] pl-4 justify-center bg-[#00D8D0]">
+                                                                    <Text className="text-white font-rbase text-sm pb-1">
+                                                                        <Text className="font-rmedium">{`ⴵ  ${pendingRequests?.length} `}</Text>
+                                                                        {'pending requests'}
+                                                                    </Text>
+                                                                </View>
+                                                            </>
+                                                        </TouchableHighlight>
+                                                    </View>
+                                                </View>
+                                                {/* Total Amenites */}
+                                                <View className="w-64 h-full flex-row items-center justify-start mr-2">
+                                                    {/* Amenities Count */}
+                                                    <View className="w-full h-[90%]">
+                                                        <TouchableHighlight className="w-full h-full bg-white border-[#D6CB00] border-[1px] rounded-3xl overflow-hidden items-center" underlayColor={'#fffd99'} onPress={() => handleChangePage('home/amenities')}>
+                                                            <>
+                                                                {/* All Amenities */}
+                                                                <View className="w-full h-[70%] flex-row">
+                                                                    {/* All Amenities */}
+                                                                    <View className="w-[60%] h-full justify-center pl-4">
+                                                                        <Text className="text-white-500 font-pmedium text-base">{"Total Amenities"}</Text>
+                                                                        <Text className="text-black font-psemibold text-xl">{data?.amenities?.count}</Text>
+                                                                    </View>
+                                                                    {/* Amenities Icons */}
+                                                                    <View className="w-[40%] h-full items-center justify-center pl-4">
+                                                                        <View className="w-14 h-14 bg-[#D6CB00] items-center justify-center rounded-xl">
+                                                                            <Image
+                                                                                tintColor="#ffffff"
+                                                                                source={icons.barangayLogo}
+                                                                                className="w-[50%] h-[50%]"
+                                                                                resizeMode='contain'
+                                                                            />
+                                                                        </View>
+                                                                    </View>
+                                                                </View>
+                                                                <View className="w-full h-[1px] bg-[#D6CB00]" />
+                                                                {/* Recent Generated Key */}
+                                                                <View className="w-full h-[30%] pl-4 justify-center bg-[#D6CB00]">
+                                                                    <Text className="text-white font-rbase text-sm pb-1">
+                                                                        <Text className="font-rmedium">{`ⴵ  `}</Text>
+                                                                        {`Updated ${formatTimeDifference(data.amenities.mostRecentKeyDate)}`}
+                                                                    </Text>
+                                                                </View>
+                                                            </>
+                                                        </TouchableHighlight>
+                                                    </View>
+                                                </View>
+                                                {/* Total Reports */}
+                                                <View className="w-64 h-full flex-row items-center justify-start mr-2">
+                                                    {/* Reports Count */}
+                                                    <View className="w-full h-[90%]">
+                                                        <TouchableHighlight className="w-full h-full bg-white border-[#00CF98] border-[1px] rounded-3xl overflow-hidden items-center" underlayColor={'#fffd99'} onPress={() => handleChangePage('home/admin-reports')}>
+                                                            <>
+                                                                {/* All Reports */}
+                                                                <View className="w-full h-[70%] flex-row">
+                                                                    {/* All Reports */}
+                                                                    <View className="w-[60%] h-full justify-center pl-4">
+                                                                        <Text className="text-white-500 font-pmedium text-base">{"Total Reports"}</Text>
+                                                                        <Text className="text-black font-psemibold text-xl">{data?.reports?.count}</Text>
+                                                                    </View>
+                                                                    {/* Reports Icons */}
+                                                                    <View className="w-[40%] h-full items-center justify-center pl-4">
+                                                                        <View className="w-14 h-14 bg-[#00CF98] items-center justify-center rounded-xl">
+                                                                            <Image
+                                                                                tintColor="#ffffff"
+                                                                                source={icons.detailHomeOn}
+                                                                                className="w-[50%] h-[50%]"
+                                                                                resizeMode='contain'
+                                                                            />
+                                                                        </View>
+                                                                    </View>
+                                                                </View>
+                                                                <View className="w-full h-[1px] bg-[#00CF98]" />
+                                                                {/* Active Users */}
+                                                                <View className="w-full h-[30%] pl-4 justify-center bg-[#00CF98]">
+                                                                    <Text className="text-white font-rbase text-sm pb-1">
+                                                                        <Text className="font-rmedium">{`ⴵ  `}</Text>
+                                                                        {`Updated ${formatTimeDifference(data.reports.mostRecentReportDate)}`}
+                                                                    </Text>
+                                                                </View>
+                                                            </>
+                                                        </TouchableHighlight>
+                                                    </View>
+                                                </View>
+                                            </ScrollView>
+                                        </View>
+                                        {/* Statistics */}
+                                        {chartData && chartData.labels.length > 0 && (
+                                            <View className="w-[95%] h-[300px] items-center justify-end mt-4 border-[#00D8D0] border-[1px] rounded-3xl overflow-hidden">
+                                                {/* Statistics */}
+                                                <View className="w-[80%] h-[75%] items-center justify-center">
+                                                    {chartData && chartData.labels.length > 0 ? (
+                                                        <BarChart
+                                                            data={{
+                                                                labels: chartData.labels,
+                                                                datasets: [{ data: chartData.data }]
+                                                            }}
+                                                            width={width}
+                                                            height={200}
+                                                            yAxisLabel=""
+                                                            yAxisSuffix=""
+                                                            fromZero={true}
+                                                            chartConfig={{
+                                                                backgroundGradientFrom: '#ffffff',
+                                                                backgroundGradientTo: '#ffffff',
+                                                                decimalPlaces: 0,
+                                                                color: (opacity = 1) => `rgba(0, 216, 208, ${opacity})`,
+                                                                labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                                                                style: { 
+                                                                    borderRadius: 10, 
+                                                                    paddingLeft: 20,
+                                                                    paddingRight: 20
+                                                                },
+                                                                propsForBackgroundLines: {
+                                                                    strokeWidth: 0.5,
+                                                                    stroke: '#ffffff',
+                                                                    strokeDasharray: '0',
+                                                                },
+                                                                propsForLabels: {
+                                                                    fontSize: 12,
+                                                                    fontWeight: 'bold',
+                                                                }
+                                                            }}
+                                                            verticalLabelRotation={0}
+                                                        />
+                                                    ) : (
+                                                        <ActivityIndicator size="large" color="#00D8D0" />
+                                                    )}
+                                                </View>
+                                                {/* Information Below */}
+                                                <View className="w-full h-[25%] bg-[#00D8D0] px-5 border-t-[1px] border-[#00D8D0]">
+                                                    <Text className="text-white font-psemibold text-lg pt-3">{'Responder Requests'}</Text>
+                                                    <Text className="text-slate-100 font-pregular text-sm">{`Updated ${formatTimeDifference(newestTimestamp)}`}</Text>
+                                                </View>
+                                            </View>
+                                        )}
+                                        {reportChartData && reportChartData.labels.length > 0 && (
+                                            <View className="w-[95%] h-[300px] items-center justify-end mt-4 mb-16 border-[#00CF98] border-[1px] rounded-3xl overflow-hidden">
+                                                {/* Statistics */}
+                                                <View className="w-[80%] h-[75%] items-center justify-center">
+                                                    <LineChart
+                                                        data={{
+                                                            labels: reportChartData.labels,
+                                                            datasets: [{ data: reportChartData.data }]
+                                                        }}
+                                                        width={width} // Width of chart
+                                                        height={200} // Height of chart
+                                                        fromZero={true}
+                                                        chartConfig={{
+                                                            backgroundColor: '#fff',
+                                                            backgroundGradientFrom: '#ffffff',
+                                                            backgroundGradientTo: '#ffffff',
+                                                            decimalPlaces: 0,
+                                                            color: (opacity = 1) => `rgba(0, 207, 152, ${opacity})`,
+                                                            labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                                                            style: {
+                                                                borderRadius: 10, 
+                                                                paddingLeft: 20,
+                                                                paddingRight: 20
+                                                            },
+                                                            propsForDots: {
+                                                                r: '5',
+                                                                strokeWidth: '2',
+                                                                stroke: '#00cf98',
+                                                                fill: '#00cf98'
+                                                            },
+                                                        }}
+                                                        style={{
+                                                            marginVertical: 8,
+                                                            borderRadius: 16,
+                                                        }}
+                                                    />
+                                                </View>
+                                                {/* Information Below */}
+                                                <View className="w-full h-[25%] bg-[#00CF98] px-5 border-t-[1px] border-[#00CF98]">
+                                                    <Text className="text-white font-psemibold text-lg pt-3">{'Report Statistics'}</Text>
+                                                    <Text className="text-slate-100 font-pregular text-sm">{`Updated ${formatTimeDifference(data.reports.mostRecentReportDate)}`}</Text>
+                                                </View>
+                                            </View>
+                                        )}
+                                    </ScrollView>
+                                </View>
                             </View>
                         ) : isResponder ? (
                             <View className="w-full h-full bg-white items-center">
@@ -927,7 +1436,7 @@ const HomeScreen = () => {
                                                 </View>
                                             </TouchableHighlight>
                                             {/* Report History */}
-                                            <TouchableHighlight underlayColor={'#acfcc8'} className="w-48 h-[70%] bg-white rounded-lg shadow-sm shadow-black ml-2 overflow-hidden" onPress={() => handleChangePage('home/details')}>
+                                            <TouchableHighlight underlayColor={'#acfcc8'} className="w-48 h-[70%] bg-white rounded-lg shadow-sm shadow-black mx-2 overflow-hidden" onPress={() => handleChangePage('home/details')}>
                                                 <View className="w-full h-full items-center flex-row">
                                                 <View className="w-[70%] h-[80%] justify-center pl-[8%]">
                                                         <Text className="text-primary-100 font-psemibold text-base">{"Report History"}</Text>

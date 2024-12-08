@@ -72,149 +72,237 @@ const Menu = ({ visible, onClose, respo, changePage, logout, admin }) => {
                         </View>
                         </View>
                     </TouchableHighlight>
-                    {/* Account Button */}
-                    <TouchableHighlight
-                        underlayColor={title === 'home/profiles' ? '#FDFFAE' : '#86ebaa'} 
-                        className={`w-full h-[7%] ${title === 'home/profiles' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
-                        onPress={() => handlePress('home/profiles')}
-                    >
-                        <View className="w-full h-full flex-row">
-                        <View className="w-1/3 h-full items-center justify-center">
-                            <Image 
-                            tintColor={title === 'home/profiles' ? '#57b378' : '#ffffff'}
-                            source={icons.profile}
-                            className="w-[40%] h-[40%]"
-                            resizeMode='contain'
-                            />
-                        </View>
-                        <View className="w-2/3 h-full justify-center pl-2">
-                            <Text className={`font-rmedium text-base ${title === 'home/profiles' ? 'text-primary' : 'text-white'}`}>Account</Text>
-                        </View>
-                        </View>
-                    </TouchableHighlight>
-                    {/* Map Button */}
-                    <TouchableHighlight
-                        underlayColor={title === 'home/maps' ? '#FDFFAE' : '#86ebaa'} 
-                        className={`w-full h-[7%] ${title === 'home/maps' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
-                        onPress={() => handlePress('home/maps')}
-                    >
-                        <View className="w-full h-full flex-row">
-                        <View className="w-1/3 h-full items-center justify-center">
-                            <Image 
-                            tintColor={title === 'home/maps' ? '#57b378' : '#ffffff'}
-                            source={icons.mapDefault}
-                            className="w-[40%] h-[40%]"
-                            resizeMode='contain'
-                            />
-                        </View>
-                        <View className="w-2/3 h-full justify-center pl-2">
-                            <Text className={`font-rmedium text-base ${title === 'home/maps' ? 'text-primary' : 'text-white'}`}>Map</Text>
-                        </View>
-                        </View>
-                    </TouchableHighlight>
-                    {/* Report Button */}
-                    <TouchableHighlight
-                        underlayColor={title === 'home/reports' ? '#FDFFAE' : '#86ebaa'} 
-                        className={`w-full h-[7%] ${title === 'home/reports' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
-                        onPress={() => handlePress('home/reports')}
-                    >
-                        <View className="w-full h-full flex-row">
-                        <View className="w-1/3 h-full items-center justify-center">
-                            <Image 
-                            tintColor={title === 'home/reports' ? '#57b378' : '#ffffff'}
-                            source={icons.report}
-                            className="w-[40%] h-[40%]"
-                            resizeMode='contain'
-                            />
-                        </View>
-                        <View className="w-2/3 h-full justify-center pl-2">
-                            <Text className={`font-rmedium text-base ${title === 'home/reports' ? 'text-primary' : 'text-white'}`}>Report</Text>
-                        </View>
-                        </View>
-                    </TouchableHighlight>
-                    {/* Detail Button */}
-                    <TouchableHighlight
-                        underlayColor={title === 'home/details' ? '#FDFFAE' : '#86ebaa'} 
-                        className={`w-full h-[7%] ${title === 'home/details' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
-                        onPress={() => handlePress('home/details')}
-                    >
-                        <View className="w-full h-full flex-row">
-                        <View className="w-1/3 h-full items-center justify-center">
-                            <Image 
-                            tintColor={title === 'home/details' ? '#57b378' : '#ffffff'}
-                            source={icons.details}
-                            className="w-[40%] h-[40%]"
-                            resizeMode='contain'
-                            />
-                        </View>
-                        <View className="w-2/3 h-full justify-center pl-2">
-                            <Text className={`font-rmedium text-base ${title === 'home/details' ? 'text-primary' : 'text-white'}`}>Details</Text>
-                        </View>
-                        </View>
-                    </TouchableHighlight>
-                    {respo ? (
-                    <>
-                        {/* Statistics Button */}
-                        <TouchableHighlight
-                            underlayColor={title === 'home/statistics' ? '#FDFFAE' : '#86ebaa'} 
-                            className={`w-full h-[7%] ${title === 'home/statistics' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
-                            onPress={() => handlePress('home/statistics')}
-                        >
-                            <View className="w-full h-full flex-row">
-                            <View className="w-1/3 h-full items-center justify-center">
-                                <Image 
-                                tintColor={title === 'home/statistics' ? '#57b378' : '#ffffff'}
-                                source={icons.statistics}
-                                className="w-[40%] h-[40%]"
-                                resizeMode='contain'
-                                />
-                            </View>
-                            <View className="w-2/3 h-full justify-center pl-2">
-                                <Text className={`font-rmedium text-base ${title === 'home/statistics' ? 'text-primary' : 'text-white'}`}>Statistics</Text>
-                            </View>
-                            </View>
-                        </TouchableHighlight>
-                        {/* Print Button */}
-                        <TouchableHighlight
-                            underlayColor={title === 'home/documents' ? '#FDFFAE' : '#86ebaa'} 
-                            className={`w-full h-[7%] ${title === 'home/documents' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
-                            onPress={() => handlePress('home/documents')}
-                        >
-                            <View className="w-full h-full flex-row">
-                            <View className="w-1/3 h-full items-center justify-center">
-                                <Image 
-                                tintColor={title === 'home/documents' ? '#57b378' : '#ffffff'}
-                                source={icons.prints}
-                                className="w-[40%] h-[40%]"
-                                resizeMode='contain'
-                                />
-                            </View>
-                            <View className="w-2/3 h-full justify-center pl-2">
-                                <Text className={`font-rmedium text-base ${title === 'home/documents' ? 'text-primary' : 'text-white'}`}>Document</Text>
-                            </View>
-                            </View>
-                        </TouchableHighlight>
-                    </>) : (<></>)}
-                    {/* Help Button */}
-                    <TouchableHighlight
-                        underlayColor={title === 'home/helps' ? '#FDFFAE' : '#86ebaa'} 
-                        className={`w-full h-[7%] ${title === 'home/helps' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
-                        onPress={() => handlePress('home/helps')}
-                    >
-                        <View className="w-full h-full flex-row">
-                        <View className="w-1/3 h-full items-center justify-center">
-                            <Image 
-                            tintColor={title === 'home/helps' ? '#57b378' : '#ffffff'}
-                            source={icons.help}
-                            className="w-[40%] h-[40%]"
-                            resizeMode='contain'
-                            />
-                        </View>
-                        <View className="w-2/3 h-full justify-center pl-2">
-                            <Text className={`font-rmedium text-base ${title === 'home/helps' ? 'text-primary' : 'text-white'}`}>Help</Text>
-                        </View>
-                        </View>
-                    </TouchableHighlight>
+                    {admin ? (
+                        <>
+                            {/* Users Button */}
+                            <TouchableHighlight
+                                underlayColor={title === 'home/users' ? '#FDFFAE' : '#86ebaa'} 
+                                className={`w-full h-[7%] ${title === 'home/users' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
+                                onPress={() => handlePress('home/users')}
+                            >
+                                <View className="w-full h-full flex-row">
+                                <View className="w-1/3 h-full items-center justify-center">
+                                    <Image 
+                                    tintColor={title === 'home/users' ? '#57b378' : '#ffffff'}
+                                    source={icons.aboutUs}
+                                    className="w-[40%] h-[40%]"
+                                    resizeMode='contain'
+                                    />
+                                </View>
+                                <View className="w-2/3 h-full justify-center pl-2">
+                                    <Text className={`font-rmedium text-base ${title === 'home/users' ? 'text-primary' : 'text-white'}`}>Users</Text>
+                                </View>
+                                </View>
+                            </TouchableHighlight>
+                            {/* Requests Button */}
+                            <TouchableHighlight
+                                underlayColor={title === 'home/requests' ? '#FDFFAE' : '#86ebaa'} 
+                                className={`w-full h-[7%] ${title === 'home/requests' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
+                                onPress={() => handlePress('home/requests')}
+                            >
+                                <View className="w-full h-full flex-row">
+                                <View className="w-1/3 h-full items-center justify-center">
+                                    <Image 
+                                    tintColor={title === 'home/requests' ? '#57b378' : '#ffffff'}
+                                    source={icons.request}
+                                    className="w-[40%] h-[40%]"
+                                    resizeMode='contain'
+                                    />
+                                </View>
+                                <View className="w-2/3 h-full justify-center pl-2">
+                                    <Text className={`font-rmedium text-base ${title === 'home/requests' ? 'text-primary' : 'text-white'}`}>Requests</Text>
+                                </View>
+                                </View>
+                            </TouchableHighlight>
+                            {/* Amenities Button */}
+                            <TouchableHighlight
+                                underlayColor={title === 'home/amenities' ? '#FDFFAE' : '#86ebaa'} 
+                                className={`w-full h-[7%] ${title === 'home/amenities' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
+                                onPress={() => handlePress('home/amenities')}
+                            >
+                                <View className="w-full h-full flex-row">
+                                <View className="w-1/3 h-full items-center justify-center">
+                                    <Image 
+                                    tintColor={title === 'home/amenities' ? '#57b378' : '#ffffff'}
+                                    source={icons.barangayLogo}
+                                    className="w-[40%] h-[40%]"
+                                    resizeMode='contain'
+                                    />
+                                </View>
+                                <View className="w-2/3 h-full justify-center pl-2">
+                                    <Text className={`font-rmedium text-base ${title === 'home/amenities' ? 'text-primary' : 'text-white'}`}>Amenities</Text>
+                                </View>
+                                </View>
+                            </TouchableHighlight>
+                            {/* Reports Button */}
+                            <TouchableHighlight
+                                underlayColor={title === 'home/admin-reports' ? '#FDFFAE' : '#86ebaa'} 
+                                className={`w-full h-[7%] ${title === 'home/admin-reports' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
+                                onPress={() => handlePress('home/admin-reports')}
+                            >
+                                <View className="w-full h-full flex-row">
+                                <View className="w-1/3 h-full items-center justify-center">
+                                    <Image 
+                                    tintColor={title === 'home/admin-reports' ? '#57b378' : '#ffffff'}
+                                    source={icons.detailHomeOn}
+                                    className="w-[40%] h-[40%]"
+                                    resizeMode='contain'
+                                    />
+                                </View>
+                                <View className="w-2/3 h-full justify-center pl-2">
+                                    <Text className={`font-rmedium text-base ${title === 'home/admin-reports' ? 'text-primary' : 'text-white'}`}>Reports</Text>
+                                </View>
+                                </View>
+                            </TouchableHighlight>
+                        </>
+                    ) : (
+                        <>
+                            {/* Account Button */}
+                            <TouchableHighlight
+                                underlayColor={title === 'home/profiles' ? '#FDFFAE' : '#86ebaa'} 
+                                className={`w-full h-[7%] ${title === 'home/profiles' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
+                                onPress={() => handlePress('home/profiles')}
+                            >
+                                <View className="w-full h-full flex-row">
+                                <View className="w-1/3 h-full items-center justify-center">
+                                    <Image 
+                                    tintColor={title === 'home/profiles' ? '#57b378' : '#ffffff'}
+                                    source={icons.profile}
+                                    className="w-[40%] h-[40%]"
+                                    resizeMode='contain'
+                                    />
+                                </View>
+                                <View className="w-2/3 h-full justify-center pl-2">
+                                    <Text className={`font-rmedium text-base ${title === 'home/profiles' ? 'text-primary' : 'text-white'}`}>Account</Text>
+                                </View>
+                                </View>
+                            </TouchableHighlight>
+                            {/* Map Button */}
+                            <TouchableHighlight
+                                underlayColor={title === 'home/maps' ? '#FDFFAE' : '#86ebaa'} 
+                                className={`w-full h-[7%] ${title === 'home/maps' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
+                                onPress={() => handlePress('home/maps')}
+                            >
+                                <View className="w-full h-full flex-row">
+                                <View className="w-1/3 h-full items-center justify-center">
+                                    <Image 
+                                    tintColor={title === 'home/maps' ? '#57b378' : '#ffffff'}
+                                    source={icons.mapDefault}
+                                    className="w-[40%] h-[40%]"
+                                    resizeMode='contain'
+                                    />
+                                </View>
+                                <View className="w-2/3 h-full justify-center pl-2">
+                                    <Text className={`font-rmedium text-base ${title === 'home/maps' ? 'text-primary' : 'text-white'}`}>Map</Text>
+                                </View>
+                                </View>
+                            </TouchableHighlight>
+                            {/* Report Button */}
+                            <TouchableHighlight
+                                underlayColor={title === 'home/reports' ? '#FDFFAE' : '#86ebaa'} 
+                                className={`w-full h-[7%] ${title === 'home/reports' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
+                                onPress={() => handlePress('home/reports')}
+                            >
+                                <View className="w-full h-full flex-row">
+                                <View className="w-1/3 h-full items-center justify-center">
+                                    <Image 
+                                    tintColor={title === 'home/reports' ? '#57b378' : '#ffffff'}
+                                    source={icons.report}
+                                    className="w-[40%] h-[40%]"
+                                    resizeMode='contain'
+                                    />
+                                </View>
+                                <View className="w-2/3 h-full justify-center pl-2">
+                                    <Text className={`font-rmedium text-base ${title === 'home/reports' ? 'text-primary' : 'text-white'}`}>Report</Text>
+                                </View>
+                                </View>
+                            </TouchableHighlight>
+                            {/* Detail Button */}
+                            <TouchableHighlight
+                                underlayColor={title === 'home/details' ? '#FDFFAE' : '#86ebaa'} 
+                                className={`w-full h-[7%] ${title === 'home/details' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
+                                onPress={() => handlePress('home/details')}
+                            >
+                                <View className="w-full h-full flex-row">
+                                <View className="w-1/3 h-full items-center justify-center">
+                                    <Image 
+                                    tintColor={title === 'home/details' ? '#57b378' : '#ffffff'}
+                                    source={icons.details}
+                                    className="w-[40%] h-[40%]"
+                                    resizeMode='contain'
+                                    />
+                                </View>
+                                <View className="w-2/3 h-full justify-center pl-2">
+                                    <Text className={`font-rmedium text-base ${title === 'home/details' ? 'text-primary' : 'text-white'}`}>Details</Text>
+                                </View>
+                                </View>
+                            </TouchableHighlight>
+                            {respo ? (
+                            <>
+                                {/* Statistics Button */}
+                                <TouchableHighlight
+                                    underlayColor={title === 'home/statistics' ? '#FDFFAE' : '#86ebaa'} 
+                                    className={`w-full h-[7%] ${title === 'home/statistics' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
+                                    onPress={() => handlePress('home/statistics')}
+                                >
+                                    <View className="w-full h-full flex-row">
+                                    <View className="w-1/3 h-full items-center justify-center">
+                                        <Image 
+                                        tintColor={title === 'home/statistics' ? '#57b378' : '#ffffff'}
+                                        source={icons.statistics}
+                                        className="w-[40%] h-[40%]"
+                                        resizeMode='contain'
+                                        />
+                                    </View>
+                                    <View className="w-2/3 h-full justify-center pl-2">
+                                        <Text className={`font-rmedium text-base ${title === 'home/statistics' ? 'text-primary' : 'text-white'}`}>Statistics</Text>
+                                    </View>
+                                    </View>
+                                </TouchableHighlight>
+                                {/* Print Button */}
+                                <TouchableHighlight
+                                    underlayColor={title === 'home/documents' ? '#FDFFAE' : '#86ebaa'} 
+                                    className={`w-full h-[7%] ${title === 'home/documents' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
+                                    onPress={() => handlePress('home/documents')}
+                                >
+                                    <View className="w-full h-full flex-row">
+                                    <View className="w-1/3 h-full items-center justify-center">
+                                        <Image 
+                                        tintColor={title === 'home/documents' ? '#57b378' : '#ffffff'}
+                                        source={icons.prints}
+                                        className="w-[40%] h-[40%]"
+                                        resizeMode='contain'
+                                        />
+                                    </View>
+                                    <View className="w-2/3 h-full justify-center pl-2">
+                                        <Text className={`font-rmedium text-base ${title === 'home/documents' ? 'text-primary' : 'text-white'}`}>Document</Text>
+                                    </View>
+                                    </View>
+                                </TouchableHighlight>
+                            </>) : (<></>)}
+                            {/* Help Button */}
+                            <TouchableHighlight
+                                underlayColor={title === 'home/helps' ? '#FDFFAE' : '#86ebaa'} 
+                                className={`w-full h-[7%] ${title === 'home/helps' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-2`}
+                                onPress={() => handlePress('home/helps')}
+                            >
+                                <View className="w-full h-full flex-row">
+                                <View className="w-1/3 h-full items-center justify-center">
+                                    <Image 
+                                    tintColor={title === 'home/helps' ? '#57b378' : '#ffffff'}
+                                    source={icons.help}
+                                    className="w-[40%] h-[40%]"
+                                    resizeMode='contain'
+                                    />
+                                </View>
+                                <View className="w-2/3 h-full justify-center pl-2">
+                                    <Text className={`font-rmedium text-base ${title === 'home/helps' ? 'text-primary' : 'text-white'}`}>Help</Text>
+                                </View>
+                                </View>
+                            </TouchableHighlight>
+                        </>
+                    )}
+                    
                     {/* Bottom Border */}
                     <View className="w-full h-[30%] absolute bottom-0 border-t-0.5 border-white">
                         {/* Settings Button */}
@@ -238,7 +326,7 @@ const Menu = ({ visible, onClose, respo, changePage, logout, admin }) => {
                         </View>
                         </TouchableHighlight>
                         {/* Admin Button */}
-                        {admin && <TouchableHighlight
+                        {/* {admin && <TouchableHighlight
                             underlayColor={'#86ebaa'} 
                             className={`w-full h-[25%] bg-primary rounded-3xl`}
                             onPress={() => router.push('home/developer')}
@@ -256,7 +344,7 @@ const Menu = ({ visible, onClose, respo, changePage, logout, admin }) => {
                             <Text className="font-rmedium text-base text-white">Admin</Text>
                             </View>
                         </View>
-                        </TouchableHighlight>}
+                        </TouchableHighlight>} */}
                         {/* Logout Button */}
                         <TouchableHighlight
                             underlayColor={'#86ebaa'} 
@@ -279,7 +367,7 @@ const Menu = ({ visible, onClose, respo, changePage, logout, admin }) => {
                         </TouchableHighlight>
                         {/* Version Text */}
                         <View className="w-full absolute bottom-4">
-                        <Text className="font-rbase text-sm text-white/60 text-center">GEOMAP Version {version}</Text>
+                            <Text className="font-rbase text-sm text-white/60 text-center">GEOMAP Version {version}</Text>
                         </View>
                     </View>
                     </View>

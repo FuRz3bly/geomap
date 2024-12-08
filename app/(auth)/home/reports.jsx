@@ -698,10 +698,10 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
       return;
     }
 
-    if (!termsAccepted) {
+    /* if (!termsAccepted) {
       setTermsVisible(true); // Show terms modal if not accepted
       return;
-    }
+    } */
 
     setLoading(true);
     const storage = getStorage();
@@ -871,6 +871,9 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
       </TouchableHighlight>
     )
   }
+
+  const currentReport = report_data[currentType] || {};
+  const isFiretruckDisabled = currentReport.defaultServices?.includes('firetruck') || false;
 
   const closeSModal = () => {setSuccessVisible(false)};
   const closeFModal = () => {setFailedVisible(false)};
@@ -1417,7 +1420,7 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
                           </View>
                         </TouchableHighlight>
                         {/*-Firetruck-*/}
-                        <TouchableHighlight underlayColor={"#d9ffe6"} className="rounded-xl" onPress={() => handleServiceChange('firetruck')}>
+                        <TouchableHighlight underlayColor={"#d9ffe6"} className="rounded-xl" disabled={isFiretruckDisabled} onPress={() => handleServiceChange('firetruck')}>
                           <View className={`items-center justify-center`}>
                               <Image
                                   tintColor={selectedServices.includes('firetruck') ? "#57b378" : "#9c9c9c"}
@@ -1574,7 +1577,7 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
         </View>
         {!keyboardVisible ? (
           <View className="h-[8%] w-full items-center justify-center bg-primary/80 z-10 absolute bottom-0">
-            <TouchableHighlight underlayColor={"#d9ffe6"} className={`${width < 400 ? "w-3/5 h-10" : "w-2/3 h-12"} rounded-3xl ${isLock ? "bg-primary-10" : "bg-white"} items-center justify-center`} onPress={handleTermsAccept} disabled={loading || isLock}>
+            <TouchableHighlight underlayColor={"#d9ffe6"} className={`${width < 400 ? "w-3/5 h-10" : "w-2/3 h-12"} rounded-3xl ${isLock ? "bg-primary-10" : "bg-white"} items-center justify-center`} onPress={handleSubmit} disabled={loading || isLock}>
               {loading ? (<ActivityIndicator size="large" color="#57b378" />) : (<Text className={`${isLock ? "text-primary-75" : "text-primary"} font-psemibold text-2xl`}>SUBMIT</Text>)}
             </TouchableHighlight>
             <TouchableHighlight underlayColor={"#d9ffe6"} className="absolute right-2 rounded-full" onPress={handleDelete} disabled={isDelete}>

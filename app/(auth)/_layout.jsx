@@ -91,6 +91,34 @@ const AuthLayout = () => {
                 animation: 'slide_from_left'
               }}
             />
+            <Stack.Screen 
+              name="home/users"
+              options={{
+                headerShown: false,
+                animation: 'slide_from_left'
+              }}
+            />
+            <Stack.Screen 
+              name="home/requests"
+              options={{
+                headerShown: false,
+                animation: 'slide_from_left'
+              }}
+            />
+            <Stack.Screen 
+              name="home/amenities"
+              options={{
+                headerShown: false,
+                animation: 'slide_from_left'
+              }}
+            />
+            <Stack.Screen 
+              name="home/admin-reports"
+              options={{
+                headerShown: false,
+                animation: 'slide_from_left'
+              }}
+            />
           </Stack>
           <StatusBar backgroundColor='#57b378' style='light' />
         </>
