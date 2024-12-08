@@ -7,6 +7,9 @@ import profileRespoBorder from "../assets/icons/profile-respo-border.png";
 import profileID from "../assets/icons/profile-id.png";
 import profileIDRespo from "../assets/icons/profile-id-respo.png";
 
+import adminOn from "../assets/icons/admin-on.png";
+import adminOff from "../assets/icons/admin-off.png";
+
 import eyeHide from "../assets/icons/eye-hide.png";
 import eye from "../assets/icons/eye.png";
 import community from "../assets/icons/community.png";
@@ -139,6 +142,7 @@ import calendar from "../assets/icons/calendar.png";
 
 import mapHome from "../assets/icons/map-home.png";
 import detailHome from "../assets/icons/details-home.png";
+import detailHomeOn from "../assets/icons/details-home-on.png";
 import reportHome from "../assets/icons/report-home.png";
 import accountHome from "../assets/icons/account-home.png";
 import helpHome from "../assets/icons/help-home.png";
@@ -201,12 +205,20 @@ import barangayReportMarker from "../assets/icons/report-barangay-marker.png";
 import barangayReportMarkerSC from "../assets/icons/report-barangay-marker-select.png";
 import barangayMarkerN from "../assets/icons/barangay-marker-nearest.png";
 
+import reportWaiting from "../assets/icons/report-waiting-marker.png";
+import reportReceived from "../assets/icons/report-received-marker.png";
+import reportResponded from "../assets/icons/report-responded-marker.png";
+import reportResolved from "../assets/icons/report-resolved-marker.png";
+
 import reportPoster from "../assets/icons/report-poster.png";
+import reportDashboard from "../assets/icons/report-dashboard.png";
 import mapPoster from "../assets/icons/map-poster.png";
 import soundOn from "../assets/icons/sound-on.png";
 import soundOff from "../assets/icons/sound-off.png";
 import cameraOff from "../assets/icons/camera-off.png";
-import mediaOff from "../assets/icons/media.png";
+import mediaOn from "../assets/icons/media-on.png";
+import mediaOff from "../assets/icons/media-off.png";
+import locationOn from "../assets/icons/location-on.png";
 import locationOff from "../assets/icons/location-off.png";
 import notificationOn from "../assets/icons/notification-on.png";
 import notificationOff from "../assets/icons/notification-off.png";
@@ -215,6 +227,24 @@ import support from "../assets/icons/support.png";
 import sendFeedback from "../assets/icons/send-feedback.png";
 import information from "../assets/icons/information.png";
 import aboutUsOff from "../assets/icons/about-us-off.png";
+
+import flag from "../assets/icons/flag.png";
+import intensityMap from "../assets/icons/intensity-map.png";
+import fireLogo from "../assets/icons/fire.png";
+import policeLogo from "../assets/icons/police.png";
+import disasterLogo from "../assets/icons/disaster-logo.png";
+import barangayLogo from "../assets/icons/barangay.png";
+import nextArrowBtn from "../assets/icons/next-button.png";
+import dashboard from "../assets/icons/dashboard.png";
+import request from "../assets/icons/request.png";
+import disable from "../assets/icons/disable.png";
+import resetPassword from "../assets/icons/reset-password.png";
+
+import key from "../assets/icons/key.png";
+import add from "../assets/icons/add.png";
+import time from "../assets/icons/time.png";
+import date from "../assets/icons/date.png";
+import navigator from "../assets/icons/navigation.png";
 
 export default {
   logo,
@@ -225,6 +255,8 @@ export default {
   profileRespoBorder,
   profileID,
   profileIDRespo,
+  adminOn,
+  adminOff,
   eyeHide,
   eye,
   responder,
@@ -337,6 +369,7 @@ export default {
   calendar,
   mapHome,
   detailHome,
+  detailHomeOn,
   reportHome,
   accountHome,
   helpHome,
@@ -399,13 +432,36 @@ export default {
   soundOn,
   soundOff,
   cameraOff,
+  mediaOn,
   mediaOff,
   locationOff,
+  locationOn,
   notificationOn,
   notificationOff,
   faq,
   support,
   sendFeedback,
   information,
-  aboutUsOff
+  aboutUsOff,
+  reportWaiting,
+  reportReceived,
+  reportResponded,
+  reportResolved,
+  flag,
+  intensityMap,
+  fireLogo,
+  policeLogo,
+  disasterLogo,
+  barangayLogo,
+  nextArrowBtn,
+  dashboard,
+  request,
+  disable,
+  resetPassword,
+  key,
+  add,
+  time,
+  date,
+  navigator,
+  reportDashboard
 };

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Image, Text, TouchableHighlight, TextInput } from 'react-native';
+import { View, Image, Text, TouchableHighlight, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Modal from 'react-native-modal';
 
@@ -10,6 +10,7 @@ import { icons } from '../../../constants';
 
 const Pins = ({ visible, onClose, onProceed, onRequest, user }) => {
     const [pin, setPin] = useState(['', '', '', '']);
+    const [loading, setLoading] = useState(false);
     const [focusedIndex, setFocusedIndex] = useState(null);
     const [errorMsg, setErrorMsg] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
@@ -43,6 +44,7 @@ const Pins = ({ visible, onClose, onProceed, onRequest, user }) => {
             const isPinCorrect = await checkPIN(enteredPin);
     
             if (isPinCorrect) {
+                setLoading(true);
                 setSuccessMsg('Access granted');
                 setErrorMsg('');
     
@@ -57,12 +59,14 @@ const Pins = ({ visible, onClose, onProceed, onRequest, user }) => {
                 setPin(['', '', '', '']);
                 setSuccessMsg('');
                 onClose();
+                setLoading(false);
             } else {
+                setLoading(false);
                 setSuccessMsg('');
                 setErrorMsg('Wrong PIN Code');
             }
         }
-    };   
+    };
     
     const handleBackspace = (text, index) => {
         if (text.length === 0 && index > 0) {
@@ -118,6 +122,7 @@ const Pins = ({ visible, onClose, onProceed, onRequest, user }) => {
                                     }}
                                     onFocus={() => setFocusedIndex(index)}
                                     onBlur={() => setFocusedIndex(null)}
+                                    editable={loading ? false : true}
                                     maxLength={1}
                                     keyboardType="number-pad"
                                     secureTextEntry
@@ -131,8 +136,8 @@ const Pins = ({ visible, onClose, onProceed, onRequest, user }) => {
                         <Text className="text-rose-500 text-base font-pregular text-center">{errorMsg ? errorMsg : ''}</Text>
                     </View>
                     {/* Request PIN */}
-                    <TouchableHighlight className="w-[90%] py-3 px-4 bg-primary rounded-2xl mb-4" underlayColor={"#86ebaa"} onPress={onRequest}>
-                        <Text className="text-white text-base font-pregular text-center">{'Request PIN'}</Text>
+                    <TouchableHighlight className="w-[90%] py-3 px-4 bg-primary rounded-2xl mb-4" underlayColor={"#86ebaa"} onPress={onRequest} disabled={loading}>
+                        {loading ? <ActivityIndicator size="large" color="#ffffff" /> : <Text className="text-white text-base font-pregular text-center">{'Request PIN'}</Text>}
                     </TouchableHighlight>
                 </View>
             </SafeAreaView>

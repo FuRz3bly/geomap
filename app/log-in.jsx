@@ -87,6 +87,34 @@ export default function LogIn() {
           return;
         } */}
 
+        // Check if the user is temporarily disabled
+        if (userData.disableUntil || userData.disabled) {
+          const disableUntil = new Date(userData.disableUntil);
+          
+          if (disableUntil > new Date()) {
+              // User is still disabled
+              setFailedForm({
+                  title: 'Account Disabled!',
+                  description: `Your account is\ntemporarily disabled\nuntil ${disableUntil.toLocaleString()}.`,
+              });
+              setFailedVisible(true);
+              setLoading(false);
+              return;
+          } else if (userData.disabled) {
+              // If disableUntil has passed, re-enable the account
+              try {
+                  const userRef = doc(db, 'users', userData.uid);
+                  await updateDoc(userRef, {
+                      disabled: false,
+                      disableUntil: null, // Clear the disableUntil field
+                  });
+                  console.log('User re-enabled successfully.');
+              } catch (error) {
+                  console.error('Error enabling user:', error);
+              }
+          }
+        }
+
         // Authenticate with Firebase Auth using the user's email and provided password
         const userCredential = await signInWithEmailAndPassword(auth, userEmail, password);
         const user = userCredential.user;

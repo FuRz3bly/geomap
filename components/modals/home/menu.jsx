@@ -5,9 +5,11 @@ import Modal from 'react-native-modal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getTitle, setTitle } from '../../ToolsContext'
 
+import { router } from 'expo-router';
+
 import { icons } from '../../../constants';
 
-const Menu = ({ visible, onClose, respo, changePage, logout }) => {
+const Menu = ({ visible, onClose, respo, changePage, logout, admin }) => {
     const version = Constants.expoConfig?.version || '1.0.0'; // GEOMAP Version
     const { height, width } = Dimensions.get('screen'); // Phone Size
     const [title, setLocalTitle] = useState(getTitle());
@@ -217,9 +219,9 @@ const Menu = ({ visible, onClose, respo, changePage, logout }) => {
                     <View className="w-full h-[30%] absolute bottom-0 border-t-0.5 border-white">
                         {/* Settings Button */}
                         <TouchableHighlight
-                        underlayColor={title === 'home/settings' ? '#FDFFAE' : '#86ebaa'} 
-                        className={`w-full h-[25%] ${title === 'home/settings' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-4`}
-                        onPress={() => handlePress('home/settings')}
+                            underlayColor={title === 'home/settings' ? '#FDFFAE' : '#86ebaa'} 
+                            className={`w-full h-[25%] ${title === 'home/settings' ? 'bg-white' : 'bg-primary'} rounded-3xl mt-4`}
+                            onPress={() => handlePress('home/settings')}
                         >
                         <View className="w-full h-full flex-row">
                             <View className="w-1/3 h-full items-center justify-center">
@@ -235,11 +237,31 @@ const Menu = ({ visible, onClose, respo, changePage, logout }) => {
                             </View>
                         </View>
                         </TouchableHighlight>
+                        {/* Admin Button */}
+                        {admin && <TouchableHighlight
+                            underlayColor={'#86ebaa'} 
+                            className={`w-full h-[25%] bg-primary rounded-3xl`}
+                            onPress={() => router.push('home/developer')}
+                        >
+                        <View className="w-full h-full flex-row">
+                            <View className="w-1/3 h-full items-center justify-center">
+                            <Image 
+                                tintColor="#ffffff"
+                                source={icons.adminOn}
+                                className="w-[40%] h-[40%]"
+                                resizeMode='contain'
+                            />
+                            </View>
+                            <View className="w-2/3 h-full justify-center pl-2">
+                            <Text className="font-rmedium text-base text-white">Admin</Text>
+                            </View>
+                        </View>
+                        </TouchableHighlight>}
                         {/* Logout Button */}
                         <TouchableHighlight
-                        underlayColor={'#86ebaa'} 
-                        className={`w-full h-[25%] bg-primary rounded-3xl mt-2`}
-                        onPress={logout}
+                            underlayColor={'#86ebaa'} 
+                            className={`w-full h-[25%] bg-primary rounded-3xl`}
+                            onPress={logout}
                         >
                         <View className="w-full h-full flex-row">
                             <View className="w-1/3 h-full items-center justify-center">

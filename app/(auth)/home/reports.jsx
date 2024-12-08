@@ -43,7 +43,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, hideMenu }) => {
+const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, hideMenu, fireBuilding, quickAction }) => {
   // Global Variables
   const { user } = useContext(UserContext); // Current User Data
   const { dictionary } = useContext(ToolsContext); // Global Variables for Tools & Dictionary Translator
@@ -453,6 +453,15 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
     };
   }, []);
 
+  // Quick Action Report Building on Fire
+  useEffect(() => {
+    if (fireBuilding === true) {
+      handleEType('structural_fire');
+      quickAction(false);
+      handleInputChange('description', `May sunog po sa (address please).`);
+    }
+  }, [fireBuilding]);
+
   // Toggle Emergency Type (with animations)
   const toggleEmergencyType = () => {
     LayoutAnimation.configureNext({
@@ -783,8 +792,8 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
       setHandlerOptions([]);
       setSelectedServices([]);
       setPhotos([]);
-      changePage('home/maps');
       containReport(newReport);
+      changePage('home/maps');
     } catch (e) {
       console.error("Error adding document: ", e);
       setFailedForm({ title: 'Report Error!', description: 'Failed to submit report.' })
@@ -1297,7 +1306,7 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
                 )}
               </View>
               {/* Location of Emergency Dropdown Button */}
-              <View className="py-1">
+              {/* <View className="py-1">
                 {!isAddressVisible ? (
                   <>
                     <TouchableHighlight underlayColor={"#d9ffe6"} className="rounded-xl bg-white z-10" onPress={toggleAddress}>
@@ -1356,7 +1365,7 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
                     </View>
                   </>
                 )}
-              </View>
+              </View> */}
               {/* Services Needed Dropdown Button */}
               <View className="py-1">
                 {!isServiceVisible ? (

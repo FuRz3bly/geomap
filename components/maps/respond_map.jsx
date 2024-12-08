@@ -21,7 +21,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-const RespondMap = forwardRef(({ mapStatus, loadingMsg, successMsg, failMsg, userLocation, reportID, selectedReport, reportVisible, respoStatus, responseVisible, arrivalVisible, responseMsg, arrivalMsg }, ref) => {
+const RespondMap = forwardRef(({ mapStatus, loadingMsg, successMsg, failMsg, userLocation, reportID, selectedReport, reportVisible, respoStatus, reportStatus, responseVisible, arrivalVisible, responseMsg, arrivalMsg }, ref) => {
   // Global Variables
   const { user, isResponder } = useContext(UserContext); // User Container
   const { dictionary,
@@ -46,6 +46,7 @@ const RespondMap = forwardRef(({ mapStatus, loadingMsg, successMsg, failMsg, use
   const [respondedReports, setRespondedReports] = useState([]); // All Recent Responded Reports
   const [reportsList, setReportsList] = useState([]); // All Reports Container
   const [selectReport, setSelectReport] = useState(null); // Selected Report Container
+  const [selectedRespondedReport, setSelectedRespondedReport] = useState(null); // Selected Responded Report Container
   const [respondReport, setRespondReport] = useState(null); // Responded Report Container
   // Reference Variables
   const mapRef = useRef(null); // Map View Reference
@@ -91,8 +92,8 @@ const RespondMap = forwardRef(({ mapStatus, loadingMsg, successMsg, failMsg, use
 
   // Real-time listener from Amenity and Find User Amenity
   useEffect(() => {
-    mapStatus('loading');
-    loadingMsg('LOADING AMENITY');
+    //mapStatus('loading');
+    //loadingMsg('LOADING AMENITY');
     const unsubscribe = onSnapshot(collection(db, 'amenity'), snapshot => {
       const amenities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setAmenityList(amenities); // Set All Amenities
@@ -141,7 +142,7 @@ const RespondMap = forwardRef(({ mapStatus, loadingMsg, successMsg, failMsg, use
   
   // Real-time listener for Reports
   useEffect(() => {
-    loadingMsg('LOADING REPORTS');
+    //loadingMsg('LOADING REPORTS');
     const unsubscribe = onSnapshot(collection(db, 'reports'), (snapshot) => {
       const reports = snapshot.docs.map(doc => {
         const report = doc.data();
@@ -154,7 +155,9 @@ const RespondMap = forwardRef(({ mapStatus, loadingMsg, successMsg, failMsg, use
       setReportsList(reports); // Set All Reports
 
       // Filter Reports based on RESPONDED STATUS
-      const respondedReports = reports.filter(report => report.report_status === 'responded');
+      const respondedReports = reports.filter(report => {
+        return report.report_status === 'responded' && report.responder?.amenity?.id === userAmenity?.id;
+      });
       setRespondedReports(respondedReports); // Set Responded Reports
 
       // Filter Reports based on RECEIVED STATUS and Same Handler as User's Amenity
@@ -213,9 +216,10 @@ const RespondMap = forwardRef(({ mapStatus, loadingMsg, successMsg, failMsg, use
   }, [userAmenity, amenityList, isResponder, notifiedReports]);
 
   // Report Marker Function
-  const handleReportMarker = (report) => {
+  const handleReportMarker = (report, status) => {
     if (status !== 'eaglestoop') {
       setSelectReport(report);
+      reportStatus(status);
       reportID(reportID);
       selectedReport(report);
       reportVisible(true);
@@ -229,7 +233,9 @@ const RespondMap = forwardRef(({ mapStatus, loadingMsg, successMsg, failMsg, use
     if (selectReport && status !== 'eaglestoop') {
       setSelectReport(null);
       reportVisible(false);
+      reportStatus(null);
     }
+    setSelectedRespondedReport(null);
   };
 
   // Respond Button Function
@@ -337,16 +343,30 @@ const RespondMap = forwardRef(({ mapStatus, loadingMsg, successMsg, failMsg, use
   };
 
   useImperativeHandle(ref, () => ({
-    handleResponse, handleArrival
+    handleResponse, handleArrival,
+    handleFocus: () => {
+      if (userAmenity && mapRef.current) {
+          mapRef.current.animateCamera(
+              {
+                  center: {
+                      latitude: userAmenity.location.latitude,
+                      longitude: userAmenity.location.longitude,
+                  },
+                  zoom: 15, // Adjust zoom level as needed
+              },
+              { duration: 1000 } // Duration of animation in ms
+          );
+      }
+    },
   }));
 
   useEffect(() => {
     if (reports && userAmenity && !loadingStatus) {
-      mapStatus('success');
-      successMsg('MARKERS LOADED');
+      //mapStatus('success');
+      //successMsg('MARKERS LOADED');
       setLoadingStatus(true);
     }
-  })
+  });
 
   return (
     <View>
@@ -371,6 +391,15 @@ const RespondMap = forwardRef(({ mapStatus, loadingMsg, successMsg, failMsg, use
               latitude: userAmenity.location.latitude,
               longitude: userAmenity.location.longitude,
             }}
+            image={
+              userAmenity.type === 'police'
+                ? require('../../assets/icons/police-station-marker.png')
+                : userAmenity.type === 'disaster'
+                ? require('../../assets/icons/disaster-station-marker.png')
+                : userAmenity.type === 'barangay'
+                ? require('../../assets/icons/barangay-station-marker.png')
+                : require('../../assets/icons/fire-station-marker.png') // default icon
+            }
             title={userAmenity.name}
             description={userAmenity.description}
           />
@@ -394,10 +423,14 @@ const RespondMap = forwardRef(({ mapStatus, loadingMsg, successMsg, failMsg, use
               latitude: report.report_location.latitude,
               longitude: report.report_location.longitude,
             }}
-            title={report.report_id}
-            description={report.report_type}
-            pinColor={'yellow'}
-            onPress={() => handleReportMarker(report)}
+            image={
+              report.report_status === 'received' ? 
+              (selectReport?.report_id === report.report_id ? require('../../assets/icons/report-received-marker-select.png') : require('../../assets/icons/report-received-marker.png'))
+                : report.report_status === 'resolved'
+                ? (selectReport?.report_id === report.report_id ? require('../../assets/icons/report-resolved-marker-select.png') : require('../../assets/icons/report-resolved-marker.png'))
+                : (selectReport?.report_id === report.report_id ? require('../../assets/icons/report-waiting-marker-select.png') : require('../../assets/icons/report-waiting-marker.png')) // default icon
+            }
+            onPress={() => handleReportMarker(report, (report.report_status === 'received' ? 'received' : 'waiting'))}
           />
         ))}
         {respondedReports.map(report => (
@@ -407,9 +440,12 @@ const RespondMap = forwardRef(({ mapStatus, loadingMsg, successMsg, failMsg, use
               latitude: report.report_location.latitude,
               longitude: report.report_location.longitude,
             }}
-            title={report.report_id}
-            description={report.report_type}
-            pinColor={'aqua'}
+            image={
+              selectReport?.report_id === report.report_id
+                ? require('../../assets/icons/report-responded-marker-select.png')
+                : require('../../assets/icons/report-responded-marker.png')
+            }
+            onPress={() => handleReportMarker(report, 'responded')}
           />
         ))}
       </MapView>

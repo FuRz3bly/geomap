@@ -26,7 +26,6 @@ Notifications.setNotificationHandler({
 
 const ReportMap = forwardRef((props, ref) => {
   const {
-    reRender,
     mapStatus,
     mapWarn,
     loadingMsg,
@@ -202,7 +201,7 @@ const ReportMap = forwardRef((props, ref) => {
           }
         } else {
           const filteredAmenities = amenityList.filter(amenity =>
-            ['fire_station', 'police', 'disaster'].includes(amenity.type)
+            ['fire_station', 'police', 'disaster', 'barangay'].includes(amenity.type)
           );
           
           if (location) { // If the location of the user is available
@@ -229,7 +228,8 @@ const ReportMap = forwardRef((props, ref) => {
             const groupedAmenities = {
               fire_station: [],
               police: [],
-              disaster: []
+              disaster: [],
+              barangay: []
             };
             sortedAmenities.forEach(amenity => {
               groupedAmenities[amenity.type].push(amenity);
@@ -244,14 +244,15 @@ const ReportMap = forwardRef((props, ref) => {
               if (groupedAmenities.fire_station[i]) mergedAmenities.push(groupedAmenities.fire_station[i]);
               if (groupedAmenities.police[i]) mergedAmenities.push(groupedAmenities.police[i]);
               if (groupedAmenities.disaster[i]) mergedAmenities.push(groupedAmenities.disaster[i]);
+              if (groupedAmenities.barangay[i]) mergedAmenities.push(groupedAmenities.barangay[i]);
               i++;
             }
 
-            // Set amenities to display - 3 Nearest Fire Station, Police, Disaster
-            setAmenities(mergedAmenities.slice(0, 3));
+            // Set amenities to display - 3 Nearest Fire Station, Police, Disaster, Barangay
+            setAmenities(mergedAmenities.slice(0, 4));
             // Count the types of amenities
             const counts = {};
-            mergedAmenities.slice(0, 3).forEach(amenity => {
+            mergedAmenities.slice(0, 4).forEach(amenity => {
               counts[amenity.type] = (counts[amenity.type] || 0) + 1;
             });
             amenityCount(counts);
@@ -338,7 +339,6 @@ const ReportMap = forwardRef((props, ref) => {
           setReports(filteredReports);
           setSortReports(filteredReports);
         }
-        reRender();
       }
     });
     
@@ -428,7 +428,7 @@ const ReportMap = forwardRef((props, ref) => {
       // Loop to gather up to 4 amenities based on includedAmenity
       while (
         mergedAmenities.length < 4 &&
-        (categoryAmenities.fire_station?.[i] || categoryAmenities.police?.[i] || categoryAmenities.disaster?.[i])
+        (categoryAmenities.fire_station?.[i] || categoryAmenities.police?.[i] || categoryAmenities.disaster?.[i] || categoryAmenities.barangay?.[i])
       ) {
         if (includedAmenity.includes('fire_station') && categoryAmenities.fire_station?.[i]) {
           mergedAmenities.push(categoryAmenities.fire_station[i]);
@@ -439,14 +439,17 @@ const ReportMap = forwardRef((props, ref) => {
         if (includedAmenity.includes('disaster') && categoryAmenities.disaster?.[i]) {
           mergedAmenities.push(categoryAmenities.disaster[i]);
         }
+        if (includedAmenity.includes('barangay') && categoryAmenities.barangay?.[i]) {
+          mergedAmenities.push(categoryAmenities.barangay[i]);
+        }
         i++;
       }
   
       // Set amenities and count occurrences
       if (mergedAmenities.length > 0) {
-        setAmenities(mergedAmenities.slice(0, 3)); // Ensure only 3 are shown
+        setAmenities(mergedAmenities.slice(0, 4)); // Ensure only 3 are shown
         const counts = {};
-        mergedAmenities.slice(0, 3).forEach(amenity => {
+        mergedAmenities.slice(0, 4).forEach(amenity => {
           counts[amenity.type] = (counts[amenity.type] || 0) + 1;
         });
         amenityCount(counts); // Set the count of each amenity type
@@ -458,6 +461,7 @@ const ReportMap = forwardRef((props, ref) => {
       const nearestFire = categoryAmenities.fire_station[0];
       const nearestPolice = categoryAmenities.police[0];
       const nearestDisaster = categoryAmenities.disaster[0];
+      const nearestBarangay = categoryAmenities.barangay[0];
       
       // Filter the amenities to be included based on includedAmenity
       const nearestAmenities = includedAmenity
@@ -465,6 +469,7 @@ const ReportMap = forwardRef((props, ref) => {
         if (type === 'fire_station') return nearestFire;
         if (type === 'police') return nearestPolice;
         if (type === 'disaster') return nearestDisaster;
+        if (type === 'barangay') return nearestBarangay;
         return null;
       })
       .filter(amenity => amenity); // Remove null values
@@ -627,11 +632,6 @@ const ReportMap = forwardRef((props, ref) => {
     }
   }, [selectedResult, searchMode]);
 
-  // Force Render Markers
-  const forceRender = () => {
-    setMarkerKey(prevKey => prevKey + 1);
-  };
-
   // Function to calculate estimated arrival time
   const calculateArrivalTime = (distance, speed = 20) => {
     const timeInSeconds = distance / (speed / 3.6); // speed in m/s
@@ -779,11 +779,7 @@ const ReportMap = forwardRef((props, ref) => {
       //mapStatus('success');
       //successMsg('MARKERS LOADED');
       //setKey(prevKey => prevKey + 1);
-      const timeoutId = setTimeout(() => {
-        forceRender();
-      }, 4000);
       setDoneLoading(true);
-      return () => clearTimeout(timeoutId);
     }
   }, [doneLoading]);
 
@@ -823,17 +819,18 @@ const ReportMap = forwardRef((props, ref) => {
                   latitude: amenity.location.latitude,
                   longitude: amenity.location.longitude,
                 }}
+                image={
+                  amenity.type === 'police'
+                    ? require('../../assets/icons/police-station-marker.png')
+                    : amenity.type === 'disaster'
+                    ? require('../../assets/icons/disaster-station-marker.png')
+                    : amenity.type === 'barangay'
+                    ? require('../../assets/icons/barangay-station-marker.png')
+                    : require('../../assets/icons/fire-station-marker.png') // default icon
+                }
                 tracksViewChanges={tracksViewChanges}
                 onPress={() => handleAmenityMarker(amenity, distance)}
-              >
-                <View className='w-10 h-10 z-10 justify-center items-center'>
-                  <Image
-                    source={icogenerator(amenity?.type, 'amenity')}
-                    className="w-full h-full"
-                    resizeMode="contain"
-                  />
-                </View>
-              </Marker>
+              />
             )
           }
         })}
@@ -844,17 +841,18 @@ const ReportMap = forwardRef((props, ref) => {
               latitude: report.report_location.latitude,
               longitude: report.report_location.longitude,
             }}
+            image={
+              report.handler === 'police'
+                ? require('../../assets/icons/police-report-marker.png')
+                : report.handler === 'disaster'
+                ? require('../../assets/icons/disaster-report-marker.png')
+                : report.handler === 'barangay'
+                ? require('../../assets/icons/barangay-report-marker.png')
+                : require('../../assets/icons/fire-report-marker.png') // default icon
+            }
             tracksViewChanges={tracksViewChanges}
             onPress={() => handleReportMarker(report)}
-          >
-            <View className='w-10 h-10 z-10 justify-center items-center'>
-                <Image
-                  source={icogenerator(report?.handler, 'reports')}
-                  className="w-full h-full"
-                  resizeMode="contain"
-                />
-            </View>
-          </Marker>
+          />
         ))}
         {reportMarkerVisible && [].concat(receiveReport || [], responseReport || []).map((report, index) => (
             <Marker

@@ -423,13 +423,13 @@ const StatisticsScreen = ({ changePage, backPage }) => {
   };
     
   return (
-    <SafeAreaView className="w-full h-full top-[1%] overflow-hidden">
+    <SafeAreaView className="w-full h-full overflow-hidden">
       <View className="w-full h-full bg-primary items-center">
         <ScrollView contentContainerStyle={{height: height, width: width}} showsVerticalScrollIndicator={false}>
           <View className="w-full bg-white" style={{ height: height, width: width }}>
             <View className="w-full bg-primary" style={{ height: '20%', width: width, zIndex: 10 }}/>
             {/* Service Selection Button */}
-            <View className="w-full h-10 justify-center -top-[20%] items-center px-5 z-30">
+            <View className="w-full h-10 justify-center -top-[14%] items-center px-5 z-30">
               <ScrollView className='w-full h-full' horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
                   <TouchableHighlight underlayColor={"#FDFFAE"} className={`h-full rounded-3xl ${serviceMode === "reports" ? "bg-white" : "bg-primary"} items-center justify-center px-6 mr-3`} onPress={() => serviceModeChange("reports")} disabled={serviceMode === "reports"}>
                     <Text className={`${serviceMode === "reports" ? "text-primary" : "text-white"} font-psemibold text-sm`}>Total Reports</Text>
@@ -447,7 +447,7 @@ const StatisticsScreen = ({ changePage, backPage }) => {
             </View>
             {serviceMode === 'reports' ? (
               <>
-                <View className="w-full -top-[18%] items-center justify-center z-10">
+                <View className="w-full -top-[12%] items-center justify-center z-10">
                 {/* Reports Statistics */}
                 <View className="bg-white items-center shadow-lg shadow-black-200">
                   <View className="py-[5%] flex-row gap-x-[95px] justify-center">
@@ -588,7 +588,7 @@ const StatisticsScreen = ({ changePage, backPage }) => {
                       display="calendar"
                       onChange={(event, date) => {
                         handleWeekFilterChange("calendar");
-                        toggleCalendar(true);
+                        toggleCalendar(false);
                         if (date) {
                           const pickedDate = new Date(date);
                         
@@ -607,7 +607,7 @@ const StatisticsScreen = ({ changePage, backPage }) => {
                   )}
                 </View>
                 </View>
-                <View className="w-[95%] pl-6 items-center justify-center -top-[18%]">
+                <View className="w-[95%] pl-6 items-center justify-center -top-[12%]">
                   <View className="h-16">
                     {/* Total Reports */}
                     <View className="w-full flex-row">
@@ -659,7 +659,7 @@ const StatisticsScreen = ({ changePage, backPage }) => {
               </>
             ) : serviceMode === 'reportType' ? (
               <>
-                <View className="w-full -top-[18%] items-center justify-center z-10">
+                <View className="w-full -top-[12%] items-center justify-center z-10">
                 {/* Reports Statistics */}
                 <View className="bg-white items-center shadow-lg shadow-black-200">
                   <View className="py-[5%] flex-row gap-x-[95px] justify-center">
@@ -855,7 +855,7 @@ const StatisticsScreen = ({ changePage, backPage }) => {
               </>
             ) : serviceMode === 'respoTime' ? (
               <>
-                <View className="w-full -top-[18%] items-center justify-center z-10">
+                <View className="w-full -top-[12%] items-center justify-center z-10">
                 {/* Respond Time Statistics */}
                 <View className="bg-white items-center shadow-lg shadow-black-200">
                   <View className="py-[5%] flex-row gap-x-[95px] justify-center">
@@ -1119,7 +1119,7 @@ const StatisticsScreen = ({ changePage, backPage }) => {
               </>
             ) : serviceMode === 'arriveTime' ? (
               <>
-                <View className="w-full -top-[18%] items-center justify-center z-10">
+                <View className="w-full -top-[12%] items-center justify-center z-10">
                 {/* Arrival Time Statistics */}
                 <View className="bg-white items-center shadow-lg shadow-black-200">
                   <View className="py-[5%] flex-row gap-x-[95px] justify-center">

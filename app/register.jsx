@@ -90,7 +90,7 @@ const Register = () => {
   const handleTermsAccept = async () => {
     setTermsAccepted(true);
     setTermsVisible(false);
-    await registerUser(); // Proceed with submission
+    await registerUser(); // Continue with registration after terms are accepted
   };
 
   // Get Valid Date
@@ -116,50 +116,18 @@ const Register = () => {
   };
 
   const registerUser = async () => {
-    const { email, password, confirmPass, username, firstName, middleName, lastName, address, phoneNumber, birthdate } = userForm;
+    const { email, password, username, firstName, middleName, lastName, address, phoneNumber, birthdate } = userForm;
     setLoading(true);
-
-    // Create an array to store missing fields
-    const missingFields = [];
-
-    // Check each form field and add missing fields to the array
-    if (!email) missingFields.push('email');
-    if (!password) missingFields.push('password');
-    if (!username) missingFields.push('username');
-    if (!firstName) missingFields.push('firstName');
-    if (!middleName) missingFields.push('middleName');
-    if (!lastName) missingFields.push('lastName');
-    if (!address) missingFields.push('address');
-    if (!phoneNumber) missingFields.push('phoneNumber');
-    if (!birthdate) missingFields.push('birthdate');
-
-    // If there are any missing fields, show an alert and stop the registration process
-    if (missingFields.length > 0) {
-      setFailedForm({ title: 'Missing Information!', description: `Please complete all the fields.` })
-      setFailedVisible(true);
-      setRegisterReq(missingFields);
-      setLoading(false);
-      return; // Stop execution if there are missing fields
-    }
-
-    // Check if password and confirm password match
-    if (password !== confirmPass) {
-      setFailedForm({ title: 'Password Mismatch!', description: `Passwords do not match,\nplease try again.` })
-      setFailedVisible(true);
-      setRegisterReq(['password', 'confirmPass']);
-      setLoading(false);
-      return; // Stop execution if passwords don't match
-    }
-
+  
     // Format birthdate to YYYY-MM-DD
-    const formattedBirthdate = new Date(birthdate).toISOString().slice(0, 10); // Extracts the date part (YYYY-MM-DD)
-
+    const formattedBirthdate = new Date(birthdate).toISOString().slice(0, 10);
+  
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-
+  
       const newUserId = await generateUserId();
-
+  
       await setDoc(doc(db, 'users', user.uid), {
         user_id: newUserId,
         uid: user.uid,
@@ -178,9 +146,8 @@ const Register = () => {
         session_token: null,
         reports: 0
       });
-
+  
       Alert.alert(`Welcome ${firstName}`, `Your username is ${username}`);
-      // Clear all input fields
       setUserForm({
         email: '',
         password: '',
@@ -193,17 +160,57 @@ const Register = () => {
         birthdate: '',
         confirmPass: ''
       });
-
+  
       router.push('/log-in');
-      setLoading(false);
     } catch (e) {
-      setError(e.message);
-      setFailedForm({ title: 'Registration Error!', description: e.message })
+      setFailedForm({ title: 'Registration Error!', description: e.message });
       setFailedVisible(true);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const closeSModal = () => {setSuccessVisible(false)}
+  const handleRegisterPress = async () => {
+    const { email, password, confirmPass, username, firstName, middleName, lastName, address, phoneNumber, birthdate } = userForm;
+  
+    // Step 1: Check for missing fields
+    const missingFields = [];
+    if (!email) missingFields.push('email');
+    if (!password) missingFields.push('password');
+    if (!username) missingFields.push('username');
+    if (!firstName) missingFields.push('firstName');
+    if (!middleName) missingFields.push('middleName');
+    if (!lastName) missingFields.push('lastName');
+    if (!address) missingFields.push('address');
+    if (!phoneNumber) missingFields.push('phoneNumber');
+    if (!birthdate) missingFields.push('birthdate');
+  
+    if (missingFields.length > 0) {
+      setFailedForm({ title: 'Missing Information!', description: `Please complete all the fields.` });
+      setFailedVisible(true);
+      setRegisterReq(missingFields);
+      return;
+    }
+  
+    // Step 2: Check password match
+    if (password !== confirmPass) {
+      setFailedForm({ title: 'Password Mismatch!', description: `Passwords do not match,\nplease try again.` });
+      setFailedVisible(true);
+      setRegisterReq(['password', 'confirmPass']);
+      return;
+    }
+  
+    // Step 3: Display terms if not yet accepted
+    if (!isTermsAccepted) {
+      setTermsVisible(true);
+    } else {
+      await registerUser();
+    }
+  };
+
+  const closeSModal = () => {
+    setSuccessVisible(false)
+  }
   const closeFModal = () => {setFailedVisible(false)}
   const closeTModal = () => {setTermsVisible(false)}
 
@@ -376,7 +383,7 @@ const Register = () => {
           </View>
           {!passwordsMatch && <Text className="text-base text-rose-600/75 font-pregular">Please make sure passwords match</Text>}
           <View className="w-[93%] h-[0.2%] items-center justify-center bg-primary my-10"/>
-          <TouchableHighlight underlayColor={"#86ebaa"} className="w-5/6 h-12 rounded-3xl bg-primary items-center justify-center mb-10" onPress={() => setTermsVisible(true)} disabled={loading}>
+          <TouchableHighlight underlayColor={"#86ebaa"} className="w-5/6 h-12 rounded-3xl bg-primary items-center justify-center mb-10" onPress={handleRegisterPress} disabled={loading}>
               {loading ? (<ActivityIndicator size="large" color="#ffffff" />) : (<Text className="text-white font-psemibold text-xl">REGISTER</Text>)}
           </TouchableHighlight>
         </View>

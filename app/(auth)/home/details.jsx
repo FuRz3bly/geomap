@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext, useRef } from 'react';
-import { View, Text, Image, Button, ScrollView, ActivityIndicator, BackHandler, TouchableOpacity, TouchableHighlight, LayoutAnimation, Platform, UIManager, Dimensions } from 'react-native';
+import { View, Text, Image, Button, ScrollView, ActivityIndicator, BackHandler, TouchableOpacity, TouchableHighlight, LayoutAnimation, Platform, UIManager, Dimensions, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -16,7 +16,7 @@ const DetailScreen = ({ changePage, backPage, status, loadings, savings }) => {
     const { width, height } = Dimensions.get('screen');
     const { user, isResponder } = useContext(UserContext);
     const { dictionary } = useContext(ToolsContext);
-    const [reportID, setLocalID] = useState(getID());
+    const [ reportID, setLocalID ] = useState(getID());
     // Local Variables
     const scrollRef = useRef(null); // Scroll View Reference
     const buttonScrollRef = useRef(null); // Buttons Reference
@@ -28,6 +28,7 @@ const DetailScreen = ({ changePage, backPage, status, loadings, savings }) => {
     const [reports, setReports] = useState([]); // Reports Container
     const [selectedReport, setSelectedReport] = useState(null); // Selected Report Container
     const [buttonInfo, toggleButtonInfo] = useState(false);
+    const [queryReport, setQueryReport] = useState(null); // Query Report Container
     
     const [userUID, setUserUID] = useState('');
     const [totalReports, setTotalReports] = useState(0);
@@ -52,6 +53,7 @@ const DetailScreen = ({ changePage, backPage, status, loadings, savings }) => {
     useEffect(() => {
         status('loading');
         loadings('LOADING REPORTS');
+        
         const fetchReports = () => {
             const q = query(collection(db, 'reports'));
             
@@ -63,7 +65,8 @@ const DetailScreen = ({ changePage, backPage, status, loadings, savings }) => {
     
                 // Filter reports by the logged-in user's UID
                 const filteredReports = reportsList.filter(report => 
-                    report.user_report?.uid === user?.uid || report.responder?.uid === user?.uid
+                    report.user_report?.uid === user?.uid || 
+                    report.responder?.uid === user?.uid 
                 );
     
                 filteredReports.sort((a, b) => {
@@ -77,23 +80,55 @@ const DetailScreen = ({ changePage, backPage, status, loadings, savings }) => {
                 // Check if a reportID is provided
                 if (reportID) {
                     const matchingReport = filteredReports.find(report => report.report_id === reportID);
+                    
                     if (matchingReport) {
-                        const reportIndex = filteredReports.findIndex(report => report.report_id === reportID);
-                        
+                        const reportIndex = reportsList.findIndex(report => report.report_id === reportID);
+    
                         // Set the selected report and call toggleSelectedReport
                         setSelectedReport(matchingReport);
-                        toggleSelectedReport(matchingReport, reportIndex); // Pass the report and index here
-
+                        toggleSelectedReport(matchingReport, reportIndex);
+    
                         setBtnScrollKey(prevKey => prevKey + 1);
                         savings('REPORTS LOADED');
                         status('success');
                         setLoading(false);
-
+    
                         buttonScrollRef.current?.scrollTo({ x: 0, animated: true });
                         containID(null);
+    
+                        // Ensure the report is added to the reports array to avoid duplicates
+                        setReports(prevReports => {
+                            const isReportAlreadyAdded = prevReports.some(report => report.report_id === matchingReport.report_id);
+                            if (!isReportAlreadyAdded) {
+                                return [...prevReports, matchingReport];
+                            }
+                            return prevReports;
+                        });
+                    } else {
+                        // If no matching report is found, add it to reports and select it
+                        const reportToAdd = reportsList.find(report => report.report_id === reportID);
+                        if (reportToAdd) {
+                            setReports(prevReports => {
+                                const isReportAlreadyAdded = prevReports.some(report => report.report_id === reportToAdd.report_id);
+                                if (!isReportAlreadyAdded) {
+                                    return [...prevReports, reportToAdd];
+                                }
+                                return prevReports;
+                            });
+                            setSelectedReport(reportToAdd);
+                            toggleSelectedReport(reportToAdd, reportsList.indexOf(reportToAdd));
+    
+                            setBtnScrollKey(prevKey => prevKey + 1);
+                            savings('REPORTS LOADED');
+                            status('success');
+                            setLoading(false);
+    
+                            buttonScrollRef.current?.scrollTo({ x: 0, animated: true });
+                            containID(null);
+                        }
                     }
                 } else {
-                    // Default to the newest report
+                    // Default to the newest report if no reportID is provided
                     setSelectedReport(filteredReports[0]);
                     savings('REPORTS LOADED');
                     status('success');
@@ -107,7 +142,7 @@ const DetailScreen = ({ changePage, backPage, status, loadings, savings }) => {
         };
     
         fetchReports();
-    }, [reportID, user?.uid]);
+    }, [reportID, user?.uid]);    
 
     useEffect(() => {
         const fetchUserReports = async () => {
@@ -276,11 +311,15 @@ const DetailScreen = ({ changePage, backPage, status, loadings, savings }) => {
     };
 
     // Print Button Pressed
-    const handlePrint = (id) => {
-        containID(id);
-        changePage('home/documents');
-        status('loading');
-        loadings('LOADING DATA');
+    const handlePrint = (id, reportStatus) => {
+        if (reportStatus === 'waiting') {
+            Alert.alert("PRINT INVALID", "Cannot print uncomplete reports.")
+        } else {
+            containID(id);
+            changePage('home/documents');
+            status('loading');
+            loadings('LOADING DATA');
+        }
     };
 
     const reportFile = (report) => (
@@ -928,7 +967,7 @@ const DetailScreen = ({ changePage, backPage, status, loadings, savings }) => {
                             }); 
                             toggleButtonInfo(true);
                         }}
-                        onPress={() => handlePrint(selectedReport.report_id)}
+                        onPress={() => handlePrint(selectedReport.report_id, selectedReport.report_status)}
                     >
                         <>
                             <View className="w-full h-full items-center justify-center">

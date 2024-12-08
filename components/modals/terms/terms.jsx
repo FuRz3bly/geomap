@@ -75,7 +75,7 @@ const Terms = ({ visible, onClose, onAccept, page, tab }) => {
                     </View>
                     {/* Description */}
                     <Text className="text-sm font-pregular text-black text-justify py-5">
-                    {'Our Terms and Conditions were last updated on\n'}<Text className="font-psemibold text-primary">May 09, 2024</Text>{'.'}
+                    {'Our Terms and Conditions were last updated on\n'}<Text className="font-psemibold text-primary">November 12, 2024</Text>{'.'}
                     {'\n\nPlease read these terms and conditions carefully\nbefore using '}<Text className="font-psemibold text-primary">Our Service</Text>.
                     </Text>
                     {/* Container [Button | Text] */}
@@ -141,7 +141,7 @@ const Terms = ({ visible, onClose, onAccept, page, tab }) => {
                                 <Text className="font-pbold">•{" "}“Terms and Conditions”</Text>{" "}{"("}also referred as <Text className="font-pbold">“Terms”</Text>{")"} mean these Terms and Conditions that form the entire agreement between You and the Project Researchers regarding the use of the Service.{"\n"}
                                 <Text className="font-pbold">•{" "}"You"</Text>{" "} means the individual accessing or using the Service.{"\n"}
                             </Text>
-                            <Text className="text-primary font-pbold text-xl pt-7 pb-7">Acknowledgement</Text>
+                            <Text className="text-primary font-pbold text-xl py-7">Acknowledgement</Text>
                             <Text className="font-pregular text-sm text-black text-justify">
                                 These are the Terms and Conditions governing the use of this Service and the agreement that operates between 
                                 You and the Project Researchers. These Terms and Conditions set out the rights and obligations of all users regarding 
@@ -158,7 +158,33 @@ const Terms = ({ visible, onClose, onAccept, page, tab }) => {
                                 how the law protects You. {"\n"}
                                 Please read Our Privacy Policy carefully before using Our Service.
                             </Text>
-                            <Text className="text-primary font-pbold text-xl pb-7">Changes to These Terms and Conditions</Text>
+                            <Text className="text-primary font-pbold text-xl py-7">Data Privacy</Text>
+                            <Text className="font-pregular text-sm text-black text-justify">
+                                {`"Data Privacy", also called "Information Privacy" is the principle that a person should have control over their Personal Data, including the ability to decide how organizations collect, store, and use their data. (Kosinski & Forrest 2023)`}
+                            </Text>
+                            <Text className="text-primary font-pbold text-xl py-7">Why is Data Privacy Important?</Text>
+                            <Text className="font-pregular text-sm text-black text-justify">
+                                {`We have never given our personal information as easily as we do today. Technology, and the convenience it offers, has seduced us into handing over our names, addresses, and phone numbers so willingly. Personal data is exchanged for free online and offline services, loyalty card discounts, and personalized brand experiences, among others. But giving out personal data comes at a potential cost.  Security breaches happen where personal information gets destroyed, lost, altered or disclosed, accessed, and processed without consent. Many times, these instances lead to identity theft, fraud, duplication of credit cards, blackmail and damaged reputation - both among individuals and organizations. These breaches are on the rise as organizations increasingly rely on digital data, making data protection more important than ever.`}
+                            </Text>
+                            <Text className="text-primary font-pbold text-xl pt-2 pb-7">Personal VS. Sensitive</Text>
+                            <Text className="font-pregular text-sm text-black text-justify">
+                                {`Personal Information - Refers to any information whether recorded in material form or not, from which the identity of an individual is apparent or can be reasonably and directly ascertained by the entity holding the information, or when put together with other information would directly and certainly identify an individual such as:`}
+                                <Text className="font-pbold">{"\n\n"}•{" "}Full Name</Text>{"\n"}
+                                <Text className="font-pbold">•{" "}Address</Text>{"\n"}
+                                <Text className="font-pbold">•{" "}Email Address</Text>{"\n"}
+                                <Text className="font-pbold">•{" "}Phone Number</Text>{"\n"}
+                                <Text className="font-pbold">•{" "}Date of Birth</Text>{"\n\n"}
+                                {`Sensitive Personal Information - Data on a person's race, ethnic origin, political opinion, religious/similar beliefs, health, sexual life, (alleged) offenses, and court proceedings, trade union membership.`}
+                                <Text className="font-pbold">{"\n\n"}•{" "}Health Records</Text>{"\n"}
+                                <Text className="font-pbold">•{" "}Racial or Ethnic Origin</Text>{"\n"}
+                                <Text className="font-pbold">•{" "}Religious / Philosophical / Political Beliefs</Text>{"\n"}
+                                <Text className="font-pbold">•{" "}Sexual Orientation</Text>{"\n"}
+                                <Text className="font-pbold">•{" "}Criminal Record</Text>{"\n"}
+                                <Text className="font-pbold">•{" "}Education</Text>{"\n"}
+                                <Text className="font-pbold">•{" "}Marital Status</Text>{"\n"}
+                                <Text className="font-pbold">•{" "}Age</Text>
+                            </Text>
+                            <Text className="text-primary font-pbold text-xl py-7">Changes to These Terms and Conditions</Text>
                             <Text className="font-pregular text-sm text-black text-justify">
                             We reserve the right, at Our sole discretion, to modify or replace these Terms at any time. 
                             If a revision is material, We will make reasonable efforts to provide at least thirty {"(30) days’ "}
@@ -270,7 +296,7 @@ const Terms = ({ visible, onClose, onAccept, page, tab }) => {
                             <Text className="font-psemibold">•{" "}</Text>{" "}By using the About Us Page. {"\n"}
                             <Text className="font-psemibold">•{" "}</Text>{" "}By sending us an email:
                             </Text>
-                            <TouchableOpacity><Text className="font-pregular text-sm text-blue-500 text-left pb-12">geomap24@gmail.com</Text></TouchableOpacity>
+                            <TouchableOpacity><Text className="font-pregular text-sm text-blue-500 text-left pb-12">geomap2324@gmail.com</Text></TouchableOpacity>
                             </View>
                         </ScrollView>
                         </View>

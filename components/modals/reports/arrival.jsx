@@ -50,11 +50,11 @@ const Arrival = ({ visible, onClose, onProceed, report, id, time, user }) => {
                                 </Text>
                             </View>
                         </View>
-                        {/* Estimated Time of Arrival */}
+                        {/* Actual Time of Arrival */}
                         <View className="w-full h-fit flex-row">
                             <View className="w-3/6 h-full">
                                 <Text className="font-rbold text-base text-black text-justify">
-                                    {'ETA:'}
+                                    {'ATA:'}
                                 </Text>
                             </View>
                             <View className="w-3/6 h-full">

@@ -8,7 +8,7 @@ import { router } from 'expo-router';
 
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updateEmail } from 'firebase/auth';
 import { getStorage, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { getFirestore, updateDoc, doc, getDoc, onSnapshot, collection, arrayUnion } from 'firebase/firestore';
+import { getFirestore, updateDoc, doc, getDoc, addDoc, getDocs, onSnapshot, collection, arrayUnion, query, where } from 'firebase/firestore';
 import { storage, auth, db } from '../../../firebaseConfig'; 
 
 import UserContext from '../../../components/UserContext';
@@ -54,7 +54,36 @@ const ProfileScreen = ({ changePage, backPage }) => {
     const [selectedAmenity, setSelectedAmenity] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [photoIDURI, setPhotoIDURI] = useState(null);
-    const [editEmail, setEditEmail] = useState(false); 
+    const [editEmail, setEditEmail] = useState(false);
+    const [hasRequested, setRequested] = useState(false);
+    
+    useEffect(() => {
+        // Exit if `user` or `user.uid` is not defined
+        if (!user || !user.uid) return;
+    
+        const db = getFirestore();
+        const requestsRef = collection(db, 'request');
+        const pendingQuery = query(
+            requestsRef,
+            where('user_uid', '==', user.uid),
+            where('status', '==', 'pending')
+        );
+    
+        // Set up a real-time listener for pending requests
+        const unsubscribe = onSnapshot(
+            pendingQuery,
+            (querySnapshot) => {
+                setRequested(!querySnapshot.empty); // `true` if pending requests exist
+            },
+            (error) => {
+                console.error('Error checking pending requests:', error);
+                setRequested(false); // Handle error case
+            }
+        );
+    
+        // Clean up the listener on component unmount or if user.uid changes
+        return () => unsubscribe();
+    }, [user]);    
     
     // Find User Amenity
     useEffect(() => {
@@ -269,79 +298,56 @@ const ProfileScreen = ({ changePage, backPage }) => {
     };
 
     const registerResponder = async () => {
-        const auth = getAuth();
         const db = getFirestore();
-        const storage = getStorage();
-    
-        try {
-            const updatedUserId = userForm.user_id.replace(/^1/, '2'); // Replace starting '1' with '2'
-            const updatedUsername = `${userForm.username}@respo`;
-            const amenityID = selectedAmenity?.id;
-            const { address, birthdate, full_name, phone_number, rank, newEmail, email, password } = userForm;
-    
-            const user = auth.currentUser;
-            if (user.email !== email && newEmail) {
-                const credential = EmailAuthProvider.credential(user.email, password);
-                await reauthenticateWithCredential(user, credential);
-                await updateEmail(user, newEmail);
+    const storage = getStorage();
+
+    try {
+        const updatedUserId = userForm.user_id.replace(/^1/, '2'); // Replace starting '1' with '2'
+        const updatedUsername = `${userForm.username}@respo`;
+        const amenityID = selectedAmenity?.id;
+        const { address, birthdate, full_name, phone_number, rank, newEmail, email, password } = userForm;
+
+        // Upload photo_id if it exists and get the download URL
+        let photoURL = null;
+        if (photoIDURI) {
+            const photoRef = ref(storage, `users/${updatedUserId}/id`);
+            try {
+                const response = await fetch(photoIDURI);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const blob = await response.blob();
+                await uploadBytes(photoRef, blob);
+                photoURL = await getDownloadURL(photoRef);
+            } catch (fetchError) {
+                console.error('Error fetching photo ID:', fetchError);
+                throw fetchError;
             }
-    
-            // Upload photo_id if it exists
-            let photoURL = null;
-            // Upload photo_id if it exists and get the download URL
-            if (photoIDURI) {
-                const photoRef = ref(storage, `users/${updatedUserId}/id`);
-                try {
-                    const response = await fetch(photoIDURI);
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    const blob = await response.blob();
-                    await uploadBytes(photoRef, blob);
-                    photoURL = await getDownloadURL(photoRef);
-                } catch (fetchError) {
-                    console.error('Error fetching photo ID:', fetchError);
-                    throw fetchError;  // Re-throw to catch in the outer try-catch
-                }
-            }
-    
-            // Update Firestore with new fields
-            const userRef = doc(db, 'users', userForm.uid);
-            await updateDoc(userRef, {
-                type: 'responder',
-                user_id: updatedUserId,
-                username: updatedUsername,
-                address: address,
-                birthdate: birthdate,
-                full_name: {
-                    first_name: full_name.first_name,
-                    middle_name: full_name.middle_name,
-                    last_name: full_name.last_name
-                },
-                phone_number: phone_number,
-                rank: rank,
-                photo_id: photoURL, // Path in Firestore if the photo is uploaded
-                amenity_id: amenityID, // Add default value
-                amenity_key: null,
-                on_duty: false
-            });
-    
-            if (selectedAmenity) {
-                await updateDoc(doc(db, 'amenity', amenityID), {
-                    responders: arrayUnion({
-                        user_id: updatedUserId,
-                        uid: userForm.uid,
-                        full_name: userForm.full_name,
-                        username: updatedUsername,
-                        phone_number: userForm.phone_number,
-                        email: userForm.newEmail === user.email ? userForm.newEmail : userForm.email
-                    })
-                });
-            }
-            setApplyRespo(false);
-            console.log('User updated successfully as a responder.');
+        }
+
+        // Create a request document in the "requests" collection
+        await addDoc(collection(db, 'request'), {
+            type: 'responder',
+            user_id: updatedUserId,
+            username: updatedUsername,
+            address,
+            birthdate,
+            full_name,
+            phone_number,
+            rank,
+            photo_id: photoURL,
+            amenity_id: amenityID,
+            amenity_key: null,
+            on_duty: false,
+            email: newEmail || email, // use newEmail if it's present
+            status: 'pending', // Add a status field to track request state
+            createdAt: new Date(),
+            user_uid: userForm.uid // Keep reference to the user ID
+        });
+
+        setApplyRespo(false);
+        console.log('Responder request created successfully.');
+
         } catch (error) {
-            console.error('Error updating responder details:', error);
+            console.error('Error creating responder request:', error);
         }
     };
 
@@ -803,10 +809,22 @@ const ProfileScreen = ({ changePage, backPage }) => {
                         )}
                     </View>
                     {!isResponder && (
-                    <View className="w-[45%] h-[6%] absolute top-[35%] right-[1%] z-20 items-center justify-center">
-                        <TouchableHighlight className="bg-primary px-4 py-1 rounded-2xl" underlayColor={'#3b8a57'} onPress={() => setApplyRespo(true)}>
-                            <Text className="text-base font-rbase text-white">{'Apply as Responder'}</Text>
-                        </TouchableHighlight>
+                    <View className="w-2/5 h-[6%] absolute top-[35%] right-[2%] z-20 items-end justify-center">
+                        {hasRequested ? (
+                            <View className="bg-slate-400 px-4 py-1 rounded-2xl flex-row items-center">
+                                <Image
+                                    tintColor={'#ffffff'}
+                                    source={icons.recentP}
+                                    className="w-4 h-4 mr-2"
+                                    resizeMode='contain'
+                                />
+                                <Text className="text-sm font-rbase text-white">{'Pending Request'}</Text>
+                            </View>
+                        ) : (
+                            <TouchableHighlight className="bg-primary px-4 py-1 rounded-2xl" underlayColor={'#3b8a57'} onPress={() => setApplyRespo(true)} disabled={hasRequested}>
+                                <Text className="text-sm font-rbase text-white">{'Apply as Responder'}</Text>
+                            </TouchableHighlight>
+                        )}
                     </View>
                     )}
                     {/* Body Container */}

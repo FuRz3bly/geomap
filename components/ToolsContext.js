@@ -19,6 +19,10 @@ const dictionary = {
   "police_color": "bg-[#676eeb]",
   "disaster_color": "bg-[#478a3f]",
   "barangay_color": "bg-[#facc15]",
+  "fire_station_border": "border-[#ff6426]",
+  "police_border": "border-[#676eeb]",
+  "disaster_border": "border-[#478a3f]",
+  "barangay_border": "border-[#facc15]",
   firetruck: 'Firetruck',
   ambulance: 'Ambulance',
   structural_fire: "Structural Fire",
@@ -153,15 +157,19 @@ const dictionary = {
   address: 'Address',
   phoneNumber: 'Phone Number',
   birthdate: 'Birthdate',
-  'home/homes': 'Home',
+  'home/homes': '  ',
   'home/profiles': 'Account',
   'home/maps': 'Map',
-  'home/reports': 'File A Report',
-  'home/details': 'Report Files',
+  'home/reports': 'Report',
+  'home/details': 'Collection',
   'home/statistics': 'Statistics',
   'home/documents': 'Documents',
   'home/helps': 'Help',
   'home/settings': 'Settings',
+  'home/users': 'User Management',
+  'home/requests': 'Request Approval',
+  'home/amenities': 'Amenity Management',
+  'home/admin-reports' : 'Reports Management',
   'home/homes_icon': 'home',
   'home/profiles_icon': 'profile',
   'home/maps_icon': 'mapDefault',
@@ -170,7 +178,10 @@ const dictionary = {
   'home/statistics_icon': 'statistics',
   'home/documents_icon': 'prints',
   'home/helps_icon': 'help',
-  'home/settings_icon': 'settings'
+  'home/settings_icon': 'settings',
+  'home/users_icon' : 'aboutUs',
+  'home/requests_icon': 'request',
+  'home/admin-reports_icon' : 'detailHomeOn'
 };
 
 // Export the translate function separately
@@ -233,6 +244,7 @@ export const ToolsProvider = ({ children }) => {
   const [hasReport, sentReport] = useState(false); // If there is a Selected Report
   const [received, setReceived] = useState(false); // If Received button is pressed
   const [arrived, setArrived] = useState(false); // If Arrived Button is pressed
+  const [allowSounds, setAllowSounds] = useState(true); // If Menu Sounds Allowed
 
   const [isResponding, toggleResponse] = useState(false); // Toggle Responding Mode
   const [isAmenity, toggleAmenity] = useState(false); // Toggle All Amenities To Show For Range Checking
@@ -248,7 +260,8 @@ export const ToolsProvider = ({ children }) => {
         hasReport, sentReport,
         isResponding, toggleResponse,
         isAmenity, toggleAmenity,
-        arrived, setArrived
+        arrived, setArrived,
+        allowSounds, setAllowSounds
     }}>
       {children}
     </ToolsContext.Provider>

@@ -84,6 +84,13 @@ const AuthLayout = () => {
                 animation: 'slide_from_left'
               }}
             />
+            <Stack.Screen 
+              name="home/developer"
+              options={{
+                headerShown: false,
+                animation: 'slide_from_left'
+              }}
+            />
           </Stack>
           <StatusBar backgroundColor='#57b378' style='light' />
         </>

@@ -20,7 +20,7 @@ import { Success, Failed, Receipt, Received, Arrived, Alerts, Arrival, Response,
 const filePath = `${FileSystem.cacheDirectory}temp/savedAmenity.json`;
 const queryPath = `${FileSystem.cacheDirectory}temp/previousQueries.json`;
 
-const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hideMenu }) => {
+const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savings, loadings, fails, hideMenu }) => {
   // Global Variables
   const { report } = useLocalSearchParams();
   const { user, isResponder, isDuty } = useContext(UserContext);
@@ -57,7 +57,6 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
   const [buttonInfo, setButtonInfo] = useState({}); // Button Expand Information Container
   const buttonTimeouts = useRef({}); // Button Timeouts
   const [mainToolsVisible, setMainToolsVisible] = useState(false); // Visibility of Main Tools (Search & Refresh Map)
-  const [isMapRender, setMapRender] = useState(false); // Flag if Map is Re-rendered
   const [key, setKey] = useState(0); // Unmounting Map for reset
   const [subToolsVisible, setSubToolsVisible] = useState(false); // Visibility of Sub Tools (Recenter, Traffic & Compass)
   const [isTraffic, setTraffic] = useState(false); // Toggle Traffic
@@ -80,6 +79,9 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
     },
     reports: {
       visible: false
+    },
+    respo: {
+      visible: false
     }
   });
   const legends = {
@@ -94,6 +96,12 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
       {name: 'Police Related Reports', icon: icons.policeReportMarker},
       {name: 'Disaster Related Reports', icon: icons.disasterReportMarker},
       {name: 'Barangay Related Reports', icon: icons.barangayReportMarker}
+    ],
+    respo: [
+      {name: 'Waiting Reports', icon: icons.reportWaiting},
+      {name: 'Received Reports', icon: icons.reportReceived},
+      {name: 'Responded Reports', icon: icons.reportResponded},
+      {name: 'Resolved Reports', icon: icons.reportResolved}
     ]
   };
   const [mapTheme, setMapTheme] = useState('default'); // Map Theme Container
@@ -120,7 +128,7 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
   const [filterMapVisible, setFilterMapVisible] = useState(false); // Tracker if Map Filter is Visible
   const [reportMarkerVisible, setReportMarkerVisible] = useState(true); // Report Markers Visible
   const [amenityMapOptionVisible, setAmenityMapOptionVisible] = useState(false); // Display Amenity Options Variable
-  const [amenityTypes, setAmenityTypes] = useState(['fire_station', 'police', 'disaster']); // Amenities Displayed
+  const [amenityTypes, setAmenityTypes] = useState(['fire_station', 'police', 'disaster', 'barangay']); // Amenities Displayed
   const [amenityCount, setAmenityCount] = useState({ fire_station: 0, police: 0, disaster: 0, barangay: 0 }); // Count Amenity Per Types
   const [isFindNearest, setFindNearest] = useState(false); // Tracker if Finding Nearest Amenity
   const [searchView, setSearchView] = useState('recent'); // Search View Select
@@ -162,6 +170,10 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
   }); // Categories Display Container
   // Responder Variables
   const [respoStatus, setRespoStatus] = useState('hawkwatch'); // Container of Responder Status
+  const [respoReportInfoVisible, setRespoReportInfoVisible] = useState(false); // Toggle Respo Report Callout/Information Display
+  const [selectedRespoReport, setSelectedRespoReport] = useState(null); // Selected Report Container
+  const [selectedRespoReportID, setSelectedRespoReportID] = useState(null); // Selected Report ID Container
+  const [reportStatus, setReportStatus] = useState(null); // Report Status Container
 
   // Allow the back button action when the component is mounted
   useEffect(() => {
@@ -169,6 +181,7 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
       if (isIntensity === true) {
         console.log('Exiting Intensity Map');
         setIntensity(false);
+        changeMap('default');
         return true;
       } else {
         changePage('home/homes');
@@ -302,6 +315,46 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
     // Clean up the listener when component unmounts or selectedReportID changes
     return () => unsubscribe();
   }, [selectedReportID, selectedReport]); // Re-run whenever selectedReportID or selectedReport changes
+
+  // Find the same report id and use that as data
+  useEffect(() => {
+    if (!selectedRespoReportID) {
+      return;
+    }
+  
+    // Create a real-time listener for the reports list
+    const unsubscribe = onSnapshot(
+      query(collection(db, 'reports'), where('report_id', '==', selectedRespoReportID)),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const newReport = snapshot.docs[0].data();
+          const report = snapshot.docs[0].data();
+
+          // Check if the new report data is different from the current selectedReport
+          if (!selectedRespoReport || JSON.stringify(newReport) !== JSON.stringify(selectedRespoReport)) {
+            setSelectedRespoReport(newReport)
+            toggleRespoReportInfo(true);
+          }
+        }
+      },
+      (error) => {
+        console.error('Error fetching reports:', error);
+      }
+    );
+  
+    // Clean up the listener when component unmounts or selectedReportID changes
+    return () => unsubscribe();
+  }, [selectedRespoReportID, selectedRespoReport]); // Re-run whenever selectedRespoReportID or selectedRespoReport changes
+
+  useEffect(() => {
+    if (selectedMap === 'default') {
+      return;
+    } else if (selectedMap === 'intensity') {
+      setIntensity(true);
+    } else {
+      return;
+    }
+  }, [selectedMap])
 
   // Loading Expanse Trigger
   useEffect(() => {
@@ -453,7 +506,7 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
     setSearchActive(true);
     setSearchQuery('');
     setFindNearest(false);
-    setAmenityTypes(['fire_station', 'police', 'disaster']);
+    setAmenityTypes(['fire_station', 'police', 'disaster', 'barangay']);
     setAmenityMapOptionVisible(false);
     setSearchView('recent');
     setSearchActive(false);
@@ -471,6 +524,12 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
   const handleRecenter = () => {
     if (reportMapRef.current) {
       reportMapRef.current.handleRecenter();
+    }
+  };
+
+  const handleRespoRecenter = () => {
+    if (respondMapRef.current) {
+      respondMapRef.current.handleFocus();
     }
   };
 
@@ -631,6 +690,19 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
       },
     });
     setReportInfoVisible(value);
+    toggleMapOption(false)
+  };
+
+  // Expand Report Informtion Toggle
+  const toggleRespoReportInfo = (value) => {
+    LayoutAnimation.configureNext({
+      duration: 200,
+      update: {
+          type: LayoutAnimation.Types.easeInEaseOut,
+          property: LayoutAnimation.Properties.scaleXY
+      },
+    });
+    setRespoReportInfoVisible(value);
     toggleMapOption(false)
   };
 
@@ -986,7 +1058,7 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
     // Use functional state update to get the current state
     setAmenityTypes(prevAmenityTypes => {
       // Define the desired order of amenity types
-      const order = ['fire_station', 'police', 'disaster'];
+      const order = ['fire_station', 'police', 'disaster', 'barangay'];
   
       // Check if the amenityTypes array already includes the type
       if (prevAmenityTypes.includes(type)) {
@@ -1012,7 +1084,7 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
   // Reset Amenity Options
   const resetAmenity = () => {
     setFindNearest(false);
-    setAmenityTypes(['fire_station', 'police', 'disaster']);
+    setAmenityTypes(['fire_station', 'police', 'disaster', 'barangay']);
   };
 
   // Find Nearest Function
@@ -1175,14 +1247,6 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
   useEffect(() => {
     loadPreviousQueries();
   }, []);
-
-  // Forcably Render The Map Again
-  const forceRender = () => {
-    if (!isMapRender) {
-      setKey(prevKey => prevKey + 1);
-      setMapRender(true);
-    }
-  };
 
   // Receive Search Query Results Function
   const handleSearchResults = (results) => {
@@ -1376,18 +1440,36 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
 
   const handleRequest = async () => {
     if (!user) {
-        alert('User not found');
+        await Notifications.scheduleNotificationAsync({
+            content: {
+                title: "User Error",
+                body: "User not found",
+            },
+            trigger: null, // Trigger immediately
+        });
         return;
     }
 
     try {
         const pin = await updatePIN(user);
         if (pin) {
-            alert(`Requested PIN: ${pin}`);
+            await Notifications.scheduleNotificationAsync({
+                content: {
+                    title: "PIN Requested",
+                    body: `Requested PIN: ${pin}`,
+                },
+                trigger: null, // Trigger immediately
+            });
         }
     } catch (error) {
         console.error('Error requesting PIN:', error);
-        alert('An error occurred while requesting the PIN. Please try again later.');
+        await Notifications.scheduleNotificationAsync({
+            content: {
+                title: "Request Error",
+                body: "An error occurred while requesting the PIN. Please try again later.",
+            },
+            trigger: null, // Trigger immediately
+        });
     }
   };
 
@@ -1432,6 +1514,19 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
     }
   };
 
+  const handleFlag = async (id) => {
+    const reportRef = doc(db, 'reports', id);
+  
+    try {
+      await updateDoc(reportRef, {
+        flag: false,
+      });
+      console.log('Flag updated to false');
+    } catch (error) {
+      console.error('Error updating flag:', error);
+    }
+  };
+
   return (
     <SafeAreaView className={`w-full ${!keyboardVisible ? 'h-full top-0' : 'h-[105%] -top-3'} ${isIntensity ? 'bg-primary-dark' : 'bg-white'}`}>
       {/* Modals */}
@@ -1452,7 +1547,7 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
         </View>
       )} */}
       {/* Maps Container */}
-      <View className={`w-full ${reportInfoVisible && !isIntensity ? 'h-[70%]' : amenityInfoVisible && !isIntensity || mapOptions ? 'h-[55%]' : searchInfoVisible || symbolPanelVisible ? 'h-[30%]' : 'h-full'}`}>
+      <View className={`w-full ${reportInfoVisible && !isIntensity || respoReportInfoVisible ? 'h-[70%]' : amenityInfoVisible && !isIntensity || mapOptions ? 'h-[55%]' : searchInfoVisible || symbolPanelVisible ? 'h-[30%]' : 'h-full'}`}>
         {!isOnDuty ? (
           <>
           {isIntensity ? (
@@ -1470,7 +1565,6 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
               key={key} 
               ref={reportMapRef}
               {...reportMapProps}
-              reRender={forceRender}
               mapWarn={setWarnVisible}
               warnMsg={setWarnForm.description}
               userLocation={setUserLocation}
@@ -1506,9 +1600,10 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
             loadingMsg={loadings}
             successMsg={savings}
             failMsg={fails}
-            reportID={setSelectedReportID}
-            selectedReport={setSelectedReport}
-            reportVisible={toggleReportInfo}
+            reportID={setSelectedRespoReportID}
+            selectedReport={setSelectedRespoReport}
+            reportVisible={toggleRespoReportInfo}
+            reportStatus={setReportStatus}
             respoStatus={setRespoStatus}
             userLocation={setUserLocation}
             responseVisible={openResponseModal}
@@ -1649,6 +1744,7 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
           }}
           onPress={() => {
             setIntensity(false)
+            changeMap('default')
             Notifications.cancelAllScheduledNotificationsAsync();
           }}
         >
@@ -1685,7 +1781,10 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
                 }); 
                 toggleButtonInfo('returnMapButton', true)
             }}
-            onPress={() => setIntensity(false)}
+            onPress={() => {
+              setIntensity(false)
+              changeMap('default')
+            }}
           >
             <View className="w-full h-full items-center justify-center flex-row">
               {buttonInfo['returnMapButton'] && (
@@ -1703,7 +1802,7 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
               </View>
             </View>
           </TouchableHighlight>
-          </View>
+        </View>
       )}
       {/* Main Buttons */}
       {!isOnDuty ? (
@@ -2296,11 +2395,45 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
         </>
       ) : (
         <>
+          <View className={`${buttonInfo['respoFocusButton'] ? 'w-[45%]' : 'w-[15%]'} h-[8%] absolute top-[30%] right-[4%]`}>
+          {/* Respo Focus Button */}
+          <TouchableHighlight
+            underlayColor={"#3b8a57"} 
+            className={`w-full h-full bg-primary rounded-xl shadow-md shadow-black`} 
+            onLongPress={() => { 
+                LayoutAnimation.configureNext({
+                    duration: 100,
+                    update: {
+                        type: LayoutAnimation.Types.linear,
+                        property: LayoutAnimation.Properties.scaleX
+                    },
+                }); 
+                toggleButtonInfo('respoFocusButton', true)
+            }}
+            onPress={handleRespoRecenter}
+          >
+            <View className="w-full h-full items-center justify-center flex-row">
+              {buttonInfo['respoFocusButton'] && (
+                <View className="w-2/3 h-full justify-center items-end pr-2">
+                  <Text className="text-left text-base font-rbase text-white">{'Recenter'}</Text>
+                </View>
+              )}
+              <View className={`${buttonInfo['respoFocusButton'] ? 'w-16' : 'w-full'} h-full items-center justify-center`}>
+                <Image 
+                  tintColor={'#ffffff'}
+                  source={icons.mapFocus}
+                  className="w-[60%] h-[60%]"
+                  resizeMode='contain'
+                />
+              </View>
+            </View>
+          </TouchableHighlight>
+          </View>
           {respoStatus === 'hawkwatch' ? (
-            <View className={`w-[35%] h-[18%] absolute ${reportInfoVisible ? 'bottom-[38%] right-[4%]' : amenityInfoVisible ? 'bottom-[52%] right-[4%]' : searchInfoVisible ? 'bottom-[52%] -right-[90%]' : 'bottom-[3%] right-[4%]'}`}>
+            <View className={`w-[35%] h-[18%] absolute ${reportInfoVisible || respoReportInfoVisible ? 'bottom-[38%] right-[4%]' : amenityInfoVisible ? 'bottom-[52%] right-[4%]' : searchInfoVisible ? 'bottom-[52%] -right-[90%]' : 'bottom-[3%] right-[4%]'}`}>
               <TouchableHighlight
                 underlayColor={"#3b8a57"} 
-                className={`w-[70%] h-[70%] absolute bottom-0 right-0 ${selectedReport ? 'bg-primary' : 'bg-primary-disabled'} rounded-3xl shadow-md shadow-black z-20`} 
+                className={`w-[70%] h-[70%] absolute bottom-0 right-0 ${selectedRespoReport && reportStatus === 'waiting' ? 'bg-primary' : 'bg-slate-400'} rounded-3xl shadow-md shadow-black z-20`} 
                 onLongPress={() => { 
                     LayoutAnimation.configureNext({
                         duration: 100,
@@ -2311,15 +2444,15 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
                     }); 
                     toggleButtonInfo('receiveButton', true)
                 }}
-                disabled={!selectedReport}
-                onPress={() => handleReceive(selectedReport)}
+                disabled={!selectedRespoReport || reportStatus !== 'waiting'}
+                onPress={() => handleReceive(selectedRespoReport)}
               >
                 <>
                     <View className="w-full h-full items-center justify-center">
                         {buttonInfo['receiveButton'] ? (
                             <>
                                 <Image
-                                  tintColor={selectedReport ? '#ffffff' : '#b8e3c7'}
+                                  tintColor={selectedRespoReport && reportStatus === 'waiting'  ? '#ffffff' : '#b8e3c7'}
                                   source={icons.receive}
                                   className="w-[40%] h-[40%]"
                                   resizeMode='contain'
@@ -2328,7 +2461,7 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
                             </>
                         ) : (
                             <Image 
-                                tintColor={selectedReport ? '#ffffff' : '#b8e3c7'}
+                                tintColor={selectedRespoReport || reportStatus !== 'responded' || reportStatus !== 'received' ? '#ffffff' : '#b8e3c7'}
                                 source={icons.receive}
                                 className="w-[70%] h-[70%]"
                                 resizeMode='contain'
@@ -2339,7 +2472,7 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
               </TouchableHighlight>
             </View>
           ) : respoStatus === 'eaglestoop' ? (
-            <View className={`w-[35%] h-[18%] absolute ${reportInfoVisible ? 'bottom-[38%] right-[4%]' : amenityInfoVisible ? 'bottom-[52%] right-[4%]' : searchInfoVisible ? 'bottom-[52%] -right-[90%]' : 'bottom-[3%] right-[4%]'}`}>
+            <View className={`w-[35%] h-[18%] absolute ${reportInfoVisible || respoReportInfoVisible ? 'bottom-[38%] right-[4%]' : amenityInfoVisible ? 'bottom-[52%] right-[4%]' : searchInfoVisible ? 'bottom-[52%] -right-[90%]' : 'bottom-[3%] right-[4%]'}`}>
               <TouchableHighlight
                 underlayColor={"#3b8a57"} 
                 className={"w-[70%] h-[70%] absolute bottom-0 right-0 bg-primary rounded-3xl shadow-md shadow-black z-20"} 
@@ -2512,6 +2645,135 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
           </View>
         </View>
       </View>
+      {/* Respo Report Information Display */}
+      <View className={`w-full ${respoReportInfoVisible ? 'h-[35%] bottom-0' : 'h-[35%] -bottom-80'} absolute rounded-t-3xl items-center bg-white overflow-hidden`}>
+        {/* Top Notch */}
+        <View className="w-full h-[13%] mb-3 justify-center items-center bg-white">
+          {/* Top Notch */}
+          <TouchableHighlight onPress={() => toggleRespoReportInfo(false)} underlayColor={"#d9ffe6"} className="w-full h-full items-center justify-center z-10" activeOpacity={0.8}>
+            <Image 
+                tintColor="#57b378"
+                source={respoReportInfoVisible ? icons.expandDown : icons.expandUp}
+                className="w-[30%] h-[30%]"
+                resizeMode='contain'
+            />
+          </TouchableHighlight>
+        </View>
+        {/* Body Container */}
+        <View className="w-[94%] h-[87%]">
+          {/* Title Container */}
+          <View className="w-[92%] h-[20%] items-center justify-center mx-4 flex-row">
+            <View className={`w-[2%] h-[80%] ${colorGenerator(selectedRespoReport?.handler)}`} />
+            <View className="w-[94%] h-full ml-3 justify-center">
+              <Text className={`text-xl ${selectedRespoReport?.flag === false ? 'text-red-500' : 'text-black'} font-rmedium`}>{translate(selectedRespoReport?.report_type)}</Text>
+            </View>
+          </View>
+          {/* Text Container 1 */}
+          <View className="w-[96%] h-[30%] justify-center items-center flex-row bg-white rounded-lg mx-2 mt-2 px-2 shadow-sm shadow-black/40 overflow-hidden">
+            <View className={`${buttonInfo['moreDetailsButton'] ? 'w-[75%]' : 'w-[80%]'} h-[60%] justify-start flex-row ml-2`}>
+              {/* Status Color */}
+              <View className={`w-[3%] h-full ${colorGenerator(selectedRespoReport?.report_status)}`} />
+              <View className="w-[80%] h-full left-[30%] justify-center">
+                {/* Report Status */}
+                <Text className="text-base text-black font-rbase">{translate(selectedRespoReport?.report_status)}</Text>
+                {/* Report ID */}
+                <Text className="text-base text-slate-400 font-rbase">{`RID #${selectedRespoReport?.report_id}`}</Text>
+              </View>
+              <View>
+              </View>
+            </View>
+            <View className={`${buttonInfo['moreDetailsButton'] ? 'w-[27%]' : 'w-[22%]'} h-full`}>
+              <TouchableHighlight
+                underlayColor={"#3b8a57"} 
+                className="w-full h-full bg-primary" 
+                onLongPress={() => { 
+                    LayoutAnimation.configureNext({
+                        duration: 100,
+                        update: {
+                            type: LayoutAnimation.Types.linear,
+                            property: LayoutAnimation.Properties.scaleX
+                        },
+                    }); 
+                    toggleButtonInfo('moreDetailsButton', true)
+                }}
+                onPress={() => handleExpand(selectedRespoReport?.report_id)}
+            >
+              <>
+                <View className="w-full h-full items-center justify-center">
+                    {buttonInfo['moreDetailsButton'] ? (
+                        <>
+                            <Image
+                                tintColor='#ffffff'
+                                source={icons.externalLink}
+                                className="w-[30%] h-[30%] mb-1"
+                                resizeMode='contain'
+                            />
+                            <Text className="text-sm text-white font-rmedium text-center">{'MORE INFO'}</Text>
+                        </>
+                    ) : (
+                        <Image 
+                            tintColor='#ffffff'
+                            source={icons.externalLink}
+                            className="w-[40%] h-[40%]"
+                            resizeMode='contain'
+                        />
+                    )}
+                </View>
+              </>
+              </TouchableHighlight>
+            </View>
+          </View>
+          {/* Text Container 2 */}
+          <View className="w-[96%] h-[30%] justify-center items-center flex-row bg-white rounded-lg mx-2 mt-2 px-2 shadow-sm shadow-black/40 overflow-hidden">
+            <View className={`${buttonInfo['flagButton'] ? 'w-[75%]' : 'w-[80%]'} h-full justify-center ml-2`}>
+                {/* Report Address */}
+                <Text className="text-base text-black font-rmedium">{selectedRespoReport?.report_address}</Text>
+                {/* Report Name */}
+                <Text className="text-base text-slate-400 font-rbase">{translate(selectedRespoReport?.handler)}</Text>
+            </View>
+            <View className={`${buttonInfo['flagButton'] ? 'w-[27%]' : 'w-[22%]'} h-full`}>
+              <TouchableHighlight
+                underlayColor={"#3b8a57"} 
+                className="w-full h-full bg-primary" 
+                onLongPress={() => { 
+                    LayoutAnimation.configureNext({
+                        duration: 100,
+                        update: {
+                            type: LayoutAnimation.Types.linear,
+                            property: LayoutAnimation.Properties.scaleX
+                        },
+                    }); 
+                    toggleButtonInfo('flagButton', true)
+                }}
+                onPress={() => handleFlag(selectedRespoReport?.report_id)}
+            >
+              <>
+                <View className="w-full h-full items-center justify-center">
+                    {buttonInfo['flagButton'] ? (
+                        <>
+                            <Image
+                                tintColor='#ffffff'
+                                source={icons.flag}
+                                className="w-[40%] h-[40%]"
+                                resizeMode='contain'
+                            />
+                            <Text className="text-sm text-white font-rmedium text-center">{'FLAG'}</Text>
+                        </>
+                    ) : (
+                        <Image 
+                            tintColor='#ffffff'
+                            source={icons.flag}
+                            className="w-[60%] h-[60%]"
+                            resizeMode='contain'
+                        />
+                    )}
+                </View>
+            </>
+              </TouchableHighlight>
+            </View>
+          </View>
+        </View>
+      </View>
       {/* Amenity Information Display */}
       <View className={`w-full ${amenityInfoVisible && !isIntensity ? 'h-[50%] bottom-0' : 'h-[50%] -bottom-[450px]'} absolute rounded-t-3xl items-center bg-white overflow-hidden`}>
         {/* Top Notch */}
@@ -2529,7 +2791,10 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
         <View className="w-[96%] h-[12%] items-center justify-center mx-4 flex-row bg-white">
           <View className={`w-[2.5%] h-[80%] ${colorGenerator(selectedAmenity?.type)} left-[3%]`} />
           <View className="w-[94%] h-full left-[30%] justify-center">
-            <Text className="w-[95%] text-xl text-black font-rmedium" numberOfLines={1} ellipsizeMode='tail'>{selectedAmenity?.name} {selectedAmenity?.description}</Text>
+            <Text className="w-[95%] text-xl text-black font-rmedium" numberOfLines={1} ellipsizeMode='tail'>
+              {selectedAmenity?.name}
+              {selectedAmenity?.description && !/(BFP|Barangay)/i.test(selectedAmenity.name) ? ` ${selectedAmenity.description}` : ''}
+            </Text>
           </View>
         </View>
         {/* Text Container 1 */}
@@ -3077,7 +3342,7 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
               </View>
             </TouchableHighlight>
             {/* Barangay */}
-            <TouchableHighlight underlayColor={'#fffd99'} className={`w-[95%] h-[10%] mt-1 rounded-lg justify-center bg-white`} onPress={() => toggleAmenityType('barangay')} disabled>
+            <TouchableHighlight underlayColor={'#fffd99'} className={`w-[95%] h-[10%] mt-1 rounded-lg justify-center bg-white`} onPress={() => toggleAmenityType('barangay')}>
               <View className="w-full h-full flex-row">
                 {/* Checkbox Logic */}
                 <View className="w-[10%] h-full items-center justify-center">
@@ -3607,37 +3872,71 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
                 ))}
               </View>
               {/* Reports */}
-              <View className={`w-full ${legendsOptions.reports.visible ? 'h-52' : 'h-10'} overflow-hidden`}>
-                <TouchableHighlight underlayColor={'#fffd99'} onPress={() => toggleLegendsOptions('reports')} className={`w-full ${legendsOptions.reports.visible ? 'h-10' : 'h-full'}`}>
-                  <View className="w-full h-full items-center flex-row">
-                    <View className="w-[90%] h-full justify-center ">
-                      <Text className="text-base text-black font-rbase px-2">{'Reports'}</Text>
-                    </View>
-                    <View className="w-[10%] h-full justify-center items-center pl-2">
-                      <Image 
-                        tintColor="#000000"
-                        source={legendsOptions.reports.visible ? icons.expandUp : icons.expandDown}
-                        className="w-[60%] h-[50%]"
-                        resizeMode='contain'
-                      />
-                    </View>
-                  </View>
-                </TouchableHighlight>
-                {legendsOptions.reports.visible && legends.reports.map((item, index) => (
-                  <View key={index} className="w-full h-10 flex-row">
-                      <View className="w-[10%] h-full items-center justify-center">
-                          <Image
-                              source={item.icon}
-                              className="w-[90%] h-[90%]"
-                              resizeMode='contain'
-                          />
+              {isDuty ? (
+                <View className={`w-full ${legendsOptions.respo.visible ? 'h-52' : 'h-10'} overflow-hidden`}>
+                  <TouchableHighlight underlayColor={'#fffd99'} onPress={() => toggleLegendsOptions('respo')} className={`w-full ${legendsOptions.respo.visible ? 'h-10' : 'h-full'}`}>
+                    <View className="w-full h-full items-center flex-row">
+                      <View className="w-[90%] h-full justify-center ">
+                        <Text className="text-base text-black font-rbase px-2">{'Reports'}</Text>
                       </View>
-                      <View className="w-[90%] h-full justify-center">
-                          <Text className="text-base text-black font-rbase px-2">{item.name}</Text>
+                      <View className="w-[10%] h-full justify-center items-center pl-2">
+                        <Image 
+                          tintColor="#000000"
+                          source={legendsOptions.respo.visible ? icons.expandUp : icons.expandDown}
+                          className="w-[60%] h-[50%]"
+                          resizeMode='contain'
+                        />
                       </View>
-                  </View>
-                ))}
-              </View>
+                    </View>
+                  </TouchableHighlight>
+                  {legendsOptions.respo.visible && legends.respo.map((item, index) => (
+                    <View key={index} className="w-full h-10 flex-row">
+                        <View className="w-[10%] h-full items-center justify-center">
+                            <Image
+                                source={item.icon}
+                                className="w-[90%] h-[90%]"
+                                resizeMode='contain'
+                            />
+                        </View>
+                        <View className="w-[90%] h-full justify-center">
+                            <Text className="text-base text-black font-rbase px-2">{item.name}</Text>
+                        </View>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <View className={`w-full ${legendsOptions.reports.visible ? 'h-52' : 'h-10'} overflow-hidden`}>
+                  <TouchableHighlight underlayColor={'#fffd99'} onPress={() => toggleLegendsOptions('reports')} className={`w-full ${legendsOptions.reports.visible ? 'h-10' : 'h-full'}`}>
+                    <View className="w-full h-full items-center flex-row">
+                      <View className="w-[90%] h-full justify-center ">
+                        <Text className="text-base text-black font-rbase px-2">{'Reports'}</Text>
+                      </View>
+                      <View className="w-[10%] h-full justify-center items-center pl-2">
+                        <Image 
+                          tintColor="#000000"
+                          source={legendsOptions.reports.visible ? icons.expandUp : icons.expandDown}
+                          className="w-[60%] h-[50%]"
+                          resizeMode='contain'
+                        />
+                      </View>
+                    </View>
+                  </TouchableHighlight>
+                  {legendsOptions.reports.visible && legends.reports.map((item, index) => (
+                    <View key={index} className="w-full h-10 flex-row">
+                        <View className="w-[10%] h-full items-center justify-center">
+                            <Image
+                                source={item.icon}
+                                className="w-[90%] h-[90%]"
+                                resizeMode='contain'
+                            />
+                        </View>
+                        <View className="w-[90%] h-full justify-center">
+                            <Text className="text-base text-black font-rbase px-2">{item.name}</Text>
+                        </View>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
             {/* Themes Title */}
             <View className={`w-full ${themesVisible ? 'h-fit' : 'h-10'} border-b-[1px] border-slate-400 overflow-hidden`}>
@@ -3683,6 +3982,7 @@ const MapScreen = ({ changePage, backPage, status, savings, loadings, fails, hid
               onPress={() => {
                 toggleMapOption(false)
                 setIntensity(true)
+                changeMap('intensity')
                 Notifications.cancelAllScheduledNotificationsAsync();
               }}
             >

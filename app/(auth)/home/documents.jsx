@@ -19,7 +19,7 @@ import ToolsContext from '../../../components/ToolsContext';
 import { getID, containID, translate } from '../../../components/ToolsContext';
 import { images, icons } from '../../../constants';
 
-const FormScreen = ({ savings, loadings, fails, status, changePage, backPage }) => {
+const FormScreen = ({ savings, loadings, fails, status, changePage, backPage, previewProtect, returnProtect }) => {
     // Global Variables
     const { user } = useContext(UserContext); 
     const { dictionary } = useContext(ToolsContext);
@@ -74,8 +74,24 @@ const FormScreen = ({ savings, loadings, fails, status, changePage, backPage }) 
     }, [editExpand, docExpand]);
 
     useEffect(() => {
-        setLocalID(getID());
-    }, []);
+        if (!user) return;
+    
+        const localID = getID();
+        
+        // If reportID is empty (null, undefined, or empty string), return early
+        if (!localID) return;
+    
+        setLocalID(localID);
+    }, [user]);
+
+    useEffect(() => {
+        if (previewProtect) {
+            toggleDocExpand(false);
+            returnProtect(false);
+        } else {
+            return;
+        }
+    }, [previewProtect])
 
     // Loading Expanse Trigger
     useEffect(() => {
@@ -99,6 +115,8 @@ const FormScreen = ({ savings, loadings, fails, status, changePage, backPage }) 
 
     // Real-time listener and filter of reports
     useEffect(() => {
+        if (!user) return;
+
         const fetchReports = () => {
             const q = query(collection(db, 'reports'));
             
@@ -323,27 +341,27 @@ const FormScreen = ({ savings, loadings, fails, status, changePage, backPage }) 
                     </style>
                 </head>
                 <body>
-                    <p class="right-align">Report ID: #${report.report_id}</p>
+                    <p class="right-align">Report ID: #${report?.report_id}</p>
                     <h1 class="standard-heading">EMERGENCY REPORT FORM</h1>
                     <p>This form is for reporting of emergencies, accidents, and incidents. Responding officers must complete it and submit it within 24 hours of the event.</p>
                     <div class="spacer"></div>
                     <p>Date of Report: ${formattedDate}</p>
-                    <p>Handler: ${report.responder.amenity.name}</p>
+                    <p>Handler: ${report?.responder.amenity.name}</p>
                     <div class="spacer"></div>
                     <h1 class="${personInvolvedHeadingClass}">PERSON INVOLVED</h1>
                     <div class="spacer"></div>
                     <p><strong>Report Details:</strong></p>
-                    <p>Full Name: ${report.user_report.full_name.first_name} ${report.user_report.full_name.middle_name} ${report.user_report.full_name.last_name}</p>
-                    <p>Identification: UID: ${report.user_report.uid}</p>
-                    <p>Address: ${report.user_report.address}</p>
+                    <p>Full Name: ${report?.user_report?.full_name?.first_name} ${report.user_report.full_name.middle_name} ${report.user_report.full_name.last_name}</p>
+                    <p>Identification: UID: ${report?.user_report.uid}</p>
+                    <p>Address: ${report?.user_report?.address}</p>
                     <div class="contact-info">
-                        <div>Phone: +63-${report.user_report.phone_number}</div>
-                        <div>Email: ${report.user_report.email}</div>
+                        <div>Phone: +63-${report?.user_report?.phone_number}</div>
+                        <div>Email: ${report?.user_report?.email}</div>
                     </div>
                     <div class="spacer"></div>
                     <p><strong>Responder Details:</strong></p>
-                    <p>Full Name: ${report.responder.full_name.first_name} ${report.responder.full_name.middle_name} ${report.responder.full_name.last_name}</p>
-                    <p>Identification: UID: ${report.responder.uid}</p>
+                    <p>Full Name: ${report?.responder?.full_name?.first_name} ${report?.responder?.full_name?.middle_name} ${report?.responder?.full_name?.last_name}</p>
+                    <p>Identification: UID: ${report?.responder?.uid}</p>
                     <div class="spacer"></div>
                     <h1 class="${emergencyDetailsHeadingClass}">EMERGENCY DETAILS</h1>
                     <div class="spacer"></div>
@@ -351,8 +369,8 @@ const FormScreen = ({ savings, loadings, fails, status, changePage, backPage }) 
                         <div>Date of Emergency: ${formattedDate}</div>
                         <div>Time: ${formattedTime}</div>
                     </div>
-                    <p>Type of Emergency: ${translate(report.report_type)}</p>
-                    <p>Address: ${report.report_address}</p>
+                    <p>Type of Emergency: ${translate(report?.report_type)}</p>
+                    <p>Address: ${report?.report_address}</p>
                     ${descriptionSection}
                     <div class="spacer"></div>
                     <h1 class="${servicesHeadingClass}">SERVICES</h1>
@@ -545,14 +563,14 @@ const FormScreen = ({ savings, loadings, fails, status, changePage, backPage }) 
                 const { uri } = await Print.printToFileAsync({
                     html: htmlContent,
                 });
-                const newFileName = `report_form_${selectedReport.report_id}.pdf`;
+                const newFileName = `report_form_${selectedReport?.report_id}.pdf`;
                 const newUri = FileSystem.documentDirectory + newFileName;
                 await FileSystem.moveAsync({ from: uri, to: newUri });
                 await Sharing.shareAsync(newUri);
             } else if (format === 'word') {
                 // Generate the DOCX directly from HTML
                 const docxBuffer = await convertHTML(htmlContent);
-                const docxFileName = `report_form_${selectedReport.report_id}.docx`;
+                const docxFileName = `report_form_${selectedReport?.report_id}.docx`;
                 const docxUri = FileSystem.documentDirectory + docxFileName;
     
                 // Write the DOCX buffer to the filesystem
@@ -611,14 +629,14 @@ const FormScreen = ({ savings, loadings, fails, status, changePage, backPage }) 
     // Report Row Template
     const reportRow = (report) => {
         return (
-            <TouchableHighlight underlayColor={"#FDFFAE"} className="w-[95%] h-16 items-center justify-center bg-white" key={report.report_id} onPress={() => toggleSelectedReport(report)}>
+            <TouchableHighlight underlayColor={"#FDFFAE"} className="w-[95%] h-16 items-center justify-center bg-white" key={report?.report_id} onPress={() => toggleSelectedReport(report)}>
                 <View className="w-full h-full pt-3 border-b-[0.5px] border-primary flex-row">
                     <View className="w-2/4 h-full pl-[4%]">
                         <Text className="font-psemibold text-primary text-xs">
-                            {"#"}{report.report_id}
+                            {"#"}{report?.report_id}
                         </Text>
                         <Text className="font-psemibold text-primary-100 text-sm" numberOfLines={1} ellipsizeMode="tail">
-                            {report.user_report.full_name.first_name} {report.user_report.full_name.last_name}
+                            {report?.user_report?.full_name?.first_name} {report?.user_report?.full_name?.last_name}
                         </Text>
                     </View>
                     <View className="w-1/4 h-full">
@@ -732,7 +750,7 @@ const FormScreen = ({ savings, loadings, fails, status, changePage, backPage }) 
                                                     placeholder='Report ID'
                                                     editable={false}
                                                     placeholderTextColor='#94A3B8'
-                                                    value={updatedFields?.report_id ? `#${updatedFields.report_id}` : ''}
+                                                    value={updatedFields?.report_id ? `#${updatedFields?.report_id}` : ''}
                                                     onChangeText={(value) => handleInputChange('report_id', value)}
                                                 />
                                             </View>
@@ -745,7 +763,7 @@ const FormScreen = ({ savings, loadings, fails, status, changePage, backPage }) 
                                                     editable={false}
                                                     placeholderTextColor='#94A3B8'
                                                     value={updatedFields?.report_date
-                                                        ? getValidDate(updatedFields.report_date).toLocaleDateString('en-US', {
+                                                        ? getValidDate(updatedFields?.report_date).toLocaleDateString('en-US', {
                                                             month: 'long',
                                                             day: 'numeric',
                                                             year: 'numeric',
@@ -1118,7 +1136,7 @@ const FormScreen = ({ savings, loadings, fails, status, changePage, backPage }) 
                             <View className="w-full h-[5%] flex-row">
                                 <View className="w-3/6 h-full bg-white items-center justify-center rounded-t-3xl">
                                     {selectedReport && <Text className="font-rbold text-primary-100 text-base">
-                                        {selectedReport.report_id}
+                                        {selectedReport?.report_id}
                                     </Text>
                                     }
                                 </View>
