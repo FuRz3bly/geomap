@@ -177,6 +177,7 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
   const [dashboardLocateReport, setDashboardLocateReport] = useState(null); // Locate Dashboard Report
   const [selectedReportETA, setSelectedReportETA] = useState({ time: '0:00', eta: '0', distance: '0' }); // ETA to Report
   const [currentInstruction, setCurrentInstruction] = useState({ text: 'Wait', turnDistance: '0 mi' }); // Responder Instructions
+  const [respoTimer, setRespoTimer] = useState('');
 
   // Allow the back button action when the component is mounted
   useEffect(() => {
@@ -1634,6 +1635,7 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
             dashboardReceiveReport={dashboardReceive}
             setDashboardReceiveReport={setDashboardReceive}
             respoInstruction={setCurrentInstruction}
+            newTimer={setRespoTimer}
           />
         )}
       </View>
@@ -2419,6 +2421,9 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
         </>
       ) : (
         <>
+          {/* <View className="w-[14%] h-[8%] absolute bottom-[4%] left-[4%] rounded-lg bg-primary items-center justify-center">
+            <Text className="text-lg font-pmedium text-white">{respoTimer ? respoTimer : '10'}</Text>
+          </View> */}
           <View className={`${buttonInfo['respoFocusButton'] ? 'w-[45%]' : 'w-[15%]'} h-[8%] absolute top-[30%] right-[4%]`}>
             {/* Respo Focus Button */}
             <TouchableHighlight

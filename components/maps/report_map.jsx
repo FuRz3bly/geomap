@@ -305,7 +305,7 @@ const ReportMap = forwardRef((props, ref) => {
               );
               const estimatedArrivalTime = calculateArrivalTime(distance);
   
-              receiveMsg({ report: report.report_type, time: report.route_time.time || estimatedArrivalTime, respo: report.responder.full_name });
+              receiveMsg({ report: report.report_type, time: report.responder.route_time.time || estimatedArrivalTime, respo: report.responder.full_name });
               containID(report.report_id);
               receiveVisible(true);
               if (!notifiedReports.has(report.report_id)) {
@@ -881,7 +881,7 @@ const ReportMap = forwardRef((props, ref) => {
               onPress={() => handleReportMarker(report)}
             />
         ))}
-        {responderLocation && (
+        {receiveReport && responderLocation && (
           <Marker
             coordinate={
               responderLocation.latitude && responderLocation.longitude
@@ -903,7 +903,7 @@ const ReportMap = forwardRef((props, ref) => {
             }
           />
         )}
-        {responderRoute && (
+        {receiveReport && responderRoute && (
           <Polyline
             coordinates={responderRoute}
             strokeWidth={5}

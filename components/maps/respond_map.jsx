@@ -48,7 +48,8 @@ const RespondMap = forwardRef((
     dashboardReceiveReport, 
     setDashboardReceiveReport,
     reportETA,
-    respoInstruction
+    respoInstruction,
+    newTimer
   }, ref) => {
 
   // Global Variables
@@ -66,11 +67,8 @@ const RespondMap = forwardRef((
   const [heading, setHeading] = useState(0); // Device Heading
   const [responderLocation, setResponderLocation] = useState({ latitude: 0, longitude: 0 });
   const [currentInstruction, setCurrentInstruction] = useState({ text: 'Wait', turnDistance: '0 mi' }); // Responder instructions
-  const proximityThreshold = 50; // Threshold to switch to the next instruction (in meters)
-  const maxDisplayDistance = 5 * 1609.34; // 5 miles in meters
-  const [polylineCoordinates, setPolylineCoordinates] = useState([]);
-  const [progress, setProgress] = useState(0); // 0 - 100, represents the percentage of the route traveled
-  const responderRouteRef = useRef(responderRoute);
+  const [timeLeft, setTimeLeft] = useState(60);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
 
   // Notification Based Variables
   const [notifiedReports, setNotifiedReports] = useState(new Set()); // Notification Traker
@@ -798,229 +796,7 @@ const RespondMap = forwardRef((
       console.error('Error fetching Geoapify route:', error);
     }
   }; 
-
-  // Recording Responder Location
-  /* useEffect(() => {
-    if (status !== 'eaglestoop') {
-      return;
-    }
-
-    let updateInterval;
-    let prevLocation = null;
-
-    const updateResponderLocation = async (newLocation, reportRef) => {
-      console.log('Updating responder location:', newLocation); // Log new location
-      const responderLocation = new GeoPoint(newLocation.latitude, newLocation.longitude);
-      await updateDoc(reportRef, {
-        'responder.responder_location': responderLocation,
-      });
-      console.log('Responder location updated in Firestore');
-    };
-
-    const checkAndUpdateLocation = async (newLocation, reportRef) => {
-      if (prevLocation) {
-        const distance = getDistance(
-          { latitude: prevLocation.latitude, longitude: prevLocation.longitude },
-          { latitude: newLocation.latitude, longitude: newLocation.longitude }
-        );
-
-        console.log('Distance moved:', distance); // Log distance moved
-
-        if (distance > 5) { // If moved more than 5 meters
-          await updateResponderLocation(newLocation, reportRef);
-          prevLocation = newLocation; // Update the previous location
-        }
-      } else {
-        await updateResponderLocation(newLocation, reportRef);
-        prevLocation = newLocation;
-      }
-    };
-
-    console.log('Status is eaglestoop, starting location update interval'); // Log status check
-    updateInterval = setInterval(async () => {
-      if (responderLocation) {
-        const newLocation = {
-          latitude: responderLocation.latitude,
-          longitude: responderLocation.longitude,
-        };
-        const reportRef = doc(db, 'reports', respondReport.report_id);
-        await checkAndUpdateLocation(newLocation, reportRef);
-      }
-    }, 2000); // 2 seconds
-
-    return () => {
-      console.log('Clearing update interval'); // Log interval clearance
-      clearInterval(updateInterval); // Clear the interval
-    };
-  }, [status, responderLocation, respondReport]); */
-
-  // Calling API If Responder Location Changed
-  /* useEffect(() => {
-    if (status !== 'eaglestoop') {
-      return;
-    }
   
-    let drawPathInterval;
-    let prevLocation = null; // Track the responder's last location
-    const pathUpdateThreshold = 0; // Distance threshold to trigger API call (greater than 0 meters)
-  
-    const drawRoutePath = async (newLocation, respondReport) => {
-      const distanceMoved = prevLocation
-        ? getDistance(
-            { latitude: prevLocation.latitude, longitude: prevLocation.longitude },
-            { latitude: newLocation.latitude, longitude: newLocation.longitude }
-          )
-        : pathUpdateThreshold + 1; // Force the first update
-  
-      // Update the path only if the responder has moved any distance (greater than 0 meters)
-      if (distanceMoved > pathUpdateThreshold) {
-        await drawRespoPath(
-          { latitude: newLocation.latitude, longitude: newLocation.longitude },
-          { latitude: respondReport.report_location.latitude, longitude: respondReport.report_location.longitude },
-          'drive',
-          (coordinates, time, eta, distance) => {
-            console.log('Route updated:', coordinates, time, eta, distance);
-  
-            // Update route_coordinates in the Firestore database
-            const reportRef = doc(db, 'reports', respondReport.report_id);
-            updateDoc(reportRef, {
-              'responder.route_coordinates': coordinates,
-            });
-  
-            // Check if responder has arrived at the destination
-            if (
-              getDistance(newLocation, {
-                latitude: respondReport.report_location.latitude,
-                longitude: respondReport.report_location.longitude,
-              }) < 10 // 10 meters
-            ) {
-              handleArrival(); // Handle arrival logic
-            }
-          }
-        );
-  
-        // Update tracking variables
-        prevLocation = newLocation; // Update the previous location
-      }
-    };
-  
-    if (status === 'eaglestoop') {
-      console.log('Status is eaglestoop, starting draw path interval');
-      drawPathInterval = setInterval(async () => {
-        if (responderLocation) {
-          const newLocation = {
-            latitude: responderLocation.latitude,
-            longitude: responderLocation.longitude,
-          };
-          await drawRoutePath(newLocation, respondReport);
-        }
-      }, 2000); // Update interval
-    }
-  
-    return () => {
-      console.log('Clearing draw path interval');
-      clearInterval(drawPathInterval);
-    };
-  }, [status, responderLocation, respondReport]); */
-
-  /* useEffect(() => {
-    if (!responderRoute || responderRoute.length === 0 || progress >= 100) return;
-  
-    const updateProgress = () => {
-      setProgress((prevProgress) => {
-        const newProgress = prevProgress + 1; // Adjust this to change the speed of the simulation
-        return Math.min(newProgress, 100);
-      });
-    };
-  
-    const updatePolyline = () => {
-      const travelDistance = (progress / 100) * responderRoute.length;
-      const updatedCoordinates = responderRoute.slice(0, Math.ceil(travelDistance)); // Use Math.ceil to ensure it moves forward incrementally
-      setPolylineCoordinates(updatedCoordinates);
-    };
-  
-    const updateInstructions = () => {
-      if (!responderLocation || !responderInstructions) return;
-  
-      const currentDistance = (progress / 100) * responderRoute.length;
-      const nextInstruction = responderInstructions.find((instruction) => {
-        if (instruction.startLocation) {
-          const distanceToStart = getDistance(
-            { latitude: responderLocation.latitude, longitude: responderLocation.longitude },
-            { latitude: instruction.startLocation.latitude, longitude: instruction.startLocation.longitude }
-          );
-          return distanceToStart <= maxDisplayDistance;
-        }
-        return false; // Skip instructions without valid start locations
-      });
-  
-      if (nextInstruction) {
-        const distanceToStart = getDistance(
-          { latitude: responderLocation.latitude, longitude: responderLocation.longitude },
-          { latitude: nextInstruction.startLocation.latitude, longitude: nextInstruction.startLocation.longitude }
-        );
-  
-        // Update the current instruction and distance if it changes
-        if (
-          nextInstruction.text !== currentInstruction.text ||
-          (distanceToStart > proximityThreshold && distanceToStart !== currentInstruction.turnDistance)
-        ) {
-          const formattedDistance =
-            distanceToStart > 1609.34
-              ? `${(distanceToStart / 1609.34).toFixed(1)} mi`
-              : `${distanceToStart.toFixed(0)} m`;
-  
-          setCurrentInstruction({
-            text: nextInstruction.text,
-            turnDistance: formattedDistance,
-          });
-  
-          respoInstruction({
-            text: nextInstruction.text,
-            turnDistance: formattedDistance,
-          });
-        }
-  
-        // Switch to the next instruction if within the proximity threshold
-        if (distanceToStart <= proximityThreshold) {
-          const nextIndex = responderInstructions.indexOf(nextInstruction) + 1;
-          if (nextIndex < responderInstructions.length) {
-            const upcomingInstruction = responderInstructions[nextIndex];
-  
-            setCurrentInstruction({
-              text: upcomingInstruction.text,
-              turnDistance: `${(getDistance(
-                { latitude: responderLocation.latitude, longitude: responderLocation.longitude },
-                { latitude: upcomingInstruction.startLocation.latitude, longitude: upcomingInstruction.startLocation.longitude }
-              ) / 1609.34).toFixed(1)} mi`,
-            });
-  
-            respoInstruction({
-              text: upcomingInstruction.text,
-              turnDistance: `${(getDistance(
-                { latitude: responderLocation.latitude, longitude: responderLocation.longitude },
-                { latitude: upcomingInstruction.startLocation.latitude, longitude: upcomingInstruction.startLocation.longitude }
-              ) / 1609.34).toFixed(1)} mi`,
-            });
-          }
-        }
-      }
-    };
-  
-    // Update every interval (simulate every second or adjust as needed)
-    const travelInterval = setInterval(() => {
-      if (progress < 100) {
-        updateProgress();
-        updatePolyline();
-        updateInstructions(); // Sync instructions with progress
-      } else {
-        clearInterval(travelInterval);
-      }
-    }, 1000); // Adjust interval to simulate real-time travel speed
-  
-    return () => clearInterval(travelInterval); // Cleanup on unmount or when progress reaches 100%
-  }, [responderRoute, progress, responderLocation, responderInstructions, currentInstruction]); */
-
   const findClosestPointIndex = (currentLocation, route) => {
     if (!Array.isArray(route) || route.length === 0 || !currentLocation) {
       console.error('Invalid route or current location.');
@@ -1059,6 +835,22 @@ const RespondMap = forwardRef((
     );
 
     return distanceToClosestPoint > tolerance;
+  };
+
+  const updateRespoRoute = async () => {
+    try {
+      const reportRef = doc(db, 'reports', respondReport.report_id);
+  
+      const updatedFields = {
+        'responder.responder_location': new GeoPoint(responderLocation.latitude, responderLocation.longitude),
+        'responder.route_coordinates': responderRoute
+      };
+  
+      await updateDoc(reportRef, updatedFields);
+      console.log('Responder location and route coordinates updated:', updatedFields);
+    } catch (error) {
+      console.error('Error updating responder location:', error);
+    }
   };
 
   // Route Reduction and Instructions Display
@@ -1126,6 +918,20 @@ const RespondMap = forwardRef((
                 });
             }
         }
+
+        // Automatically trigger handleArrival if within threshold distance of destination
+        if (destination && destination.latitude && destination.longitude) {
+          const distanceToDestination = getDistance(
+            { latitude: responderLocation.latitude, longitude: responderLocation.longitude },
+            { latitude: destination.latitude, longitude: destination.longitude }
+          );
+    
+          const arrivalThreshold = 30;
+    
+          if (distanceToDestination <= arrivalThreshold) {
+            handleArrival();
+          }
+        }
     }
   }, [status, responderLocation, responderRoute, responderInstructions]);
 
@@ -1162,6 +968,61 @@ const RespondMap = forwardRef((
     }
   }, [status, responderLocation]);
 
+  useEffect(() => {
+    if (status === 'eaglestoop') {
+      console.log('Timer started');
+      setIsTimerRunning(true);
+    } else {
+      console.log('Timer stopped');
+      setIsTimerRunning(false);
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (!isTimerRunning) {
+      setTimeLeft(60); // Reset timer if not running
+      newTimer(60); // Update the parent timer value immediately
+      return;
+    }
+  
+    let timerId; // Declare the timerId variable here for proper scoping
+  
+    const startTimer = () => {
+      timerId = setInterval(() => {
+        setTimeLeft((prevTime) => {
+          if (prevTime <= 1) {
+            console.log('Timer completed');
+            clearInterval(timerId); // Clear the interval when time reaches 0
+  
+            // Perform async operations before restarting the timer
+            updateRespoRoute().then(() => {
+              console.log('Timer resetting and starting again');
+              setTimeLeft(60); // Reset the timer in the child component
+              newTimer(60); // Update the timer in the parent component
+  
+              // Start a new timer immediately after completing the async operation
+              startTimer(); 
+            });
+  
+            return 60; // Reset the timer value
+          }
+  
+          // Pass the updated time to the parent to reflect the countdown
+          newTimer(prevTime - 1);
+          return prevTime - 1; // Decrement time in the child component
+        });
+      }, 1000);
+    };
+  
+    startTimer(); // Start the timer when isTimerRunning is true
+  
+    // Cleanup interval on component unmount or when timer stops
+    return () => {
+      console.log('Clearing interval');
+      clearInterval(timerId);
+    };
+  }, [isTimerRunning]);
+
   useImperativeHandle(ref, () => ({
     handleResponse, handleArrival, reRoute,
     handleFocus: () => {
@@ -1179,7 +1040,6 @@ const RespondMap = forwardRef((
       }
     },
   }));
-
 
   return (
     <View>
