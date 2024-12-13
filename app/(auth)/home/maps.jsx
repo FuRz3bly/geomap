@@ -20,7 +20,7 @@ import { Success, Failed, Receipt, Received, Arrived, Alerts, Arrival, Response,
 const filePath = `${FileSystem.cacheDirectory}temp/savedAmenity.json`;
 const queryPath = `${FileSystem.cacheDirectory}temp/previousQueries.json`;
 
-const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savings, loadings, fails, hideMenu }) => {
+const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savings, loadings, fails, hideMenu, dashboardReport, dashboardReceive, setDashboardReceive }) => {
   // Global Variables
   const { report } = useLocalSearchParams();
   const { user, isResponder, isDuty } = useContext(UserContext);
@@ -174,6 +174,9 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
   const [selectedRespoReport, setSelectedRespoReport] = useState(null); // Selected Report Container
   const [selectedRespoReportID, setSelectedRespoReportID] = useState(null); // Selected Report ID Container
   const [reportStatus, setReportStatus] = useState(null); // Report Status Container
+  const [dashboardLocateReport, setDashboardLocateReport] = useState(null); // Locate Dashboard Report
+  const [selectedReportETA, setSelectedReportETA] = useState({ time: '0:00', eta: '0', distance: '0' }); // ETA to Report
+  const [currentInstruction, setCurrentInstruction] = useState({ text: 'Wait', turnDistance: '0 mi' }); // Responder Instructions
 
   // Allow the back button action when the component is mounted
   useEffect(() => {
@@ -232,7 +235,7 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
       keyboardDidHideListener.remove();
     };
   }, []);
-
+  
   // Taking the Parsed Report
   useEffect(() => {
     if (report) {
@@ -467,7 +470,17 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
   const categoryGenerator = (key) => {
     const categoryKey = dictionary[key + '_category']
     return categoryKey;
-  }
+  };
+
+  const getDirectionIcon = (instructionText) => {
+    if (instructionText.toLowerCase().includes('left')) {
+        return icons.turnLeft;
+    } else if (instructionText.toLowerCase().includes('right')) {
+        return icons.turnRight;
+    } else {
+        return icons.turnStraight; // Default icon for straight movements
+    }
+  };
 
   // Distance Color Generator Function
   const distanceColorGenerator = (distance) => {
@@ -1527,6 +1540,13 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
     }
   };
 
+  // Re-route Button Function
+  const handleReroute = () => {
+    if (respondMapRef.current) {
+      respondMapRef.current.reRoute();
+    }
+  };
+
   return (
     <SafeAreaView className={`w-full ${!keyboardVisible ? 'h-full top-0' : 'h-[105%] -top-3'} ${isIntensity ? 'bg-primary-dark' : 'bg-white'}`}>
       {/* Modals */}
@@ -1536,7 +1556,7 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
       <Receipt visible={isReceiptVisible} onClose={closeRModal} report={parsedReport} />
       <Received visible={isReceivedVisible} onClose={closeReceiveModal} onProceed={() => changePage('home/details')} report={receivedForm.report} time={receivedForm.time} respo={receivedForm.respo} />
       <Arrived visible={isArriveVisible} onClose={closeArriveModal} onProceed={() => changePage('home/details')} report={arriveForm.report} respo={arriveForm.respo} />
-      <Response visible={isResponseVisible} onClose={closeResponseModal} onProceed={() => changePage('home/details')} onNavigate={() => handleRespoNavigate(responseForm.respo)} report={responseForm.report} time={responseForm.time} id={responseForm.id} user={responseForm.user} />
+      <Response visible={isResponseVisible} onClose={closeResponseModal} onProceed={() => changePage('home/details')} onNavigate={closeResponseModal} report={responseForm.report} time={responseForm.time} id={responseForm.id} user={responseForm.user} />
       <Arrival visible={isArrivalVisible} onClose={closeArrivalModal} onProceed={() => changePage('home/details')} report={arrivalForm.report} time={arrivalForm.time} id={arrivalForm.id} user={arrivalForm.user} />
       <Resolved visible={isResolvedVisible} onClose={closeResolvedModal} onProceed={() => changePage('home/details')} report={resolvedForm.report} respo={resolvedForm.respo} />
       <Pins visible={isPinVisible} onClose={closePinModal} onProceed={() => setIsOnDuty(true)} onRequest={handleRequest} user={user}/>
@@ -1544,48 +1564,48 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
       <View className={`w-full ${reportInfoVisible && !isIntensity || respoReportInfoVisible ? 'h-[70%]' : amenityInfoVisible && !isIntensity || mapOptions ? 'h-[55%]' : searchInfoVisible || symbolPanelVisible ? 'h-[30%]' : 'h-full'}`}>
         {!isOnDuty ? (
           <>
-          {isIntensity ? (
-            <IntensityMap
-              mapStatus={status}
-              loadingMsg={loadings}
-              successMsg={savings}
-              failMsg={fails}
-              visibleCategories={visibleCategories}
-              updateCategory={updateCategory}
-              categoryState={categoryState}
-            />
-          ) : (
-            <ReportMap 
-              key={key} 
-              ref={reportMapRef}
-              {...reportMapProps}
-              mapWarn={setWarnVisible}
-              warnMsg={setWarnForm.description}
-              userLocation={setUserLocation}
-              receiveVisible={openReceiveModal}
-              arriveVisible={openArriveModal}
-              reportVisible={toggleReportInfo}
-              resolveVisible={openResolvedModal}
-              reportID={setSelectedReportID}
-              selectedReport={setSelectedReport}
-              amenityVisible={toggleAmenityInfo}
-              amenityID={setSelectedAmenityID}
-              selectedAmenity={setSelectedAmenity}
-              distanceAmenity={setAmenityDistance}
-              searchQuery={submitSearchQuery}
-              searchMode={selectedSearchMode}
-              searchVisible={hideSearchInfo}
-              isSearchActive={isSearchActive}
-              onSearchResults={handleSearchResults}
-              selectedResult={selectedResult}
-              reportMarkerVisible={reportMarkerVisible}
-              includedAmenity={amenityTypes}
-              amenityCount={setAmenityCount}
-              findNearest={isFindNearest}
-              theme={mapTheme}
-              isResponded={setResponded}
-            />
-          )}
+            {isIntensity ? (
+              <IntensityMap
+                mapStatus={status}
+                loadingMsg={loadings}
+                successMsg={savings}
+                failMsg={fails}
+                visibleCategories={visibleCategories}
+                updateCategory={updateCategory}
+                categoryState={categoryState}
+              />
+            ) : (
+              <ReportMap 
+                key={key} 
+                ref={reportMapRef}
+                {...reportMapProps}
+                mapWarn={setWarnVisible}
+                warnMsg={setWarnForm.description}
+                userLocation={setUserLocation}
+                receiveVisible={openReceiveModal}
+                arriveVisible={openArriveModal}
+                reportVisible={toggleReportInfo}
+                resolveVisible={openResolvedModal}
+                reportID={setSelectedReportID}
+                selectedReport={setSelectedReport}
+                amenityVisible={toggleAmenityInfo}
+                amenityID={setSelectedAmenityID}
+                selectedAmenity={setSelectedAmenity}
+                distanceAmenity={setAmenityDistance}
+                searchQuery={submitSearchQuery}
+                searchMode={selectedSearchMode}
+                searchVisible={hideSearchInfo}
+                isSearchActive={isSearchActive}
+                onSearchResults={handleSearchResults}
+                selectedResult={selectedResult}
+                reportMarkerVisible={reportMarkerVisible}
+                includedAmenity={amenityTypes}
+                amenityCount={setAmenityCount}
+                findNearest={isFindNearest}
+                theme={mapTheme}
+                isResponded={setResponded}
+              />
+            )}
           </>
         ) : (
           <RespondMap
@@ -1596,6 +1616,7 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
             failMsg={fails}
             reportID={setSelectedRespoReportID}
             selectedReport={setSelectedRespoReport}
+            reportETA={setSelectedReportETA}
             reportVisible={toggleRespoReportInfo}
             reportStatus={setReportStatus}
             respoStatus={setRespoStatus}
@@ -1604,6 +1625,10 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
             arrivalVisible={openArrivalModal}
             responseMsg={setResponseForm}
             arrivalMsg={setArrivalForm}
+            locateReport={dashboardReport}
+            dashboardReceiveReport={dashboardReceive}
+            setDashboardReceiveReport={setDashboardReceive}
+            respoInstruction={setCurrentInstruction}
           />
         )}
       </View>
@@ -2390,38 +2415,38 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
       ) : (
         <>
           <View className={`${buttonInfo['respoFocusButton'] ? 'w-[45%]' : 'w-[15%]'} h-[8%] absolute top-[30%] right-[4%]`}>
-          {/* Respo Focus Button */}
-          <TouchableHighlight
-            underlayColor={"#3b8a57"} 
-            className={`w-full h-full bg-primary rounded-xl shadow-md shadow-black`} 
-            onLongPress={() => { 
-                LayoutAnimation.configureNext({
-                    duration: 100,
-                    update: {
-                        type: LayoutAnimation.Types.linear,
-                        property: LayoutAnimation.Properties.scaleX
-                    },
-                }); 
-                toggleButtonInfo('respoFocusButton', true)
-            }}
-            onPress={handleRespoRecenter}
-          >
-            <View className="w-full h-full items-center justify-center flex-row">
-              {buttonInfo['respoFocusButton'] && (
-                <View className="w-2/3 h-full justify-center items-end pr-2">
-                  <Text className="text-left text-base font-rbase text-white">{'Recenter'}</Text>
+            {/* Respo Focus Button */}
+            <TouchableHighlight
+              underlayColor={"#3b8a57"} 
+              className={`w-full h-full bg-primary rounded-xl shadow-md shadow-black`} 
+              onLongPress={() => { 
+                  LayoutAnimation.configureNext({
+                      duration: 100,
+                      update: {
+                          type: LayoutAnimation.Types.linear,
+                          property: LayoutAnimation.Properties.scaleX
+                      },
+                  }); 
+                  toggleButtonInfo('respoFocusButton', true)
+              }}
+              onPress={handleRespoRecenter}
+            >
+              <View className="w-full h-full items-center justify-center flex-row">
+                {buttonInfo['respoFocusButton'] && (
+                  <View className="w-2/3 h-full justify-center items-end pr-2">
+                    <Text className="text-left text-base font-rbase text-white">{'Recenter'}</Text>
+                  </View>
+                )}
+                <View className={`${buttonInfo['respoFocusButton'] ? 'w-16' : 'w-full'} h-full items-center justify-center`}>
+                  <Image 
+                    tintColor={'#ffffff'}
+                    source={icons.mapFocus}
+                    className="w-[60%] h-[60%]"
+                    resizeMode='contain'
+                  />
                 </View>
-              )}
-              <View className={`${buttonInfo['respoFocusButton'] ? 'w-16' : 'w-full'} h-full items-center justify-center`}>
-                <Image 
-                  tintColor={'#ffffff'}
-                  source={icons.mapFocus}
-                  className="w-[60%] h-[60%]"
-                  resizeMode='contain'
-                />
               </View>
-            </View>
-          </TouchableHighlight>
+            </TouchableHighlight>
           </View>
           {respoStatus === 'hawkwatch' ? (
             <View className={`w-[35%] h-[18%] absolute ${reportInfoVisible || respoReportInfoVisible ? 'bottom-[38%] right-[4%]' : amenityInfoVisible ? 'bottom-[52%] right-[4%]' : searchInfoVisible ? 'bottom-[52%] -right-[90%]' : 'bottom-[3%] right-[4%]'}`}>
@@ -2466,46 +2491,83 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
               </TouchableHighlight>
             </View>
           ) : respoStatus === 'eaglestoop' ? (
-            <View className={`w-[35%] h-[18%] absolute ${reportInfoVisible || respoReportInfoVisible ? 'bottom-[38%] right-[4%]' : amenityInfoVisible ? 'bottom-[52%] right-[4%]' : searchInfoVisible ? 'bottom-[52%] -right-[90%]' : 'bottom-[3%] right-[4%]'}`}>
-              <TouchableHighlight
-                underlayColor={"#3b8a57"} 
-                className={"w-[70%] h-[70%] absolute bottom-0 right-0 bg-primary rounded-3xl shadow-md shadow-black z-20"} 
-                onLongPress={() => { 
-                    LayoutAnimation.configureNext({
-                        duration: 100,
-                        update: {
-                            type: LayoutAnimation.Types.linear,
-                            property: LayoutAnimation.Properties.scaleX
-                        },
-                    }); 
-                    toggleButtonInfo('arrivalButton', true)
-                }}
-                onPress={() => handleArrived()}
-              >
-                <>
-                    <View className="w-full h-full items-center justify-center">
-                        {buttonInfo['arrivalButton'] ? (
-                            <>
-                                <Image
-                                    tintColor='#ffffff'
-                                    source={icons.arrival}
-                                    className="w-[40%] h-[40%]"
-                                    resizeMode='contain'
-                                />
-                                <Text className="text-xl text-white font-rmedium">{'ARRIVED'}</Text>
-                            </>
-                        ) : (
-                            <Image 
-                                tintColor='#ffffff'
-                                source={icons.arrival}
-                                className="w-[70%] h-[70%]"
-                                resizeMode='contain'
-                            />
-                        )}
-                    </View>
-                </>
-              </TouchableHighlight>
-            </View>
+            <>
+              <View className={`w-[35%] h-[18%] absolute ${reportInfoVisible || respoReportInfoVisible ? 'bottom-[38%] right-[4%]' : amenityInfoVisible ? 'bottom-[52%] right-[4%]' : searchInfoVisible ? 'bottom-[52%] -right-[90%]' : 'bottom-[3%] right-[4%]'}`}>
+                <TouchableHighlight
+                  underlayColor={"#3b8a57"} 
+                  className={"w-[70%] h-[70%] absolute bottom-0 right-0 bg-primary rounded-3xl shadow-md shadow-black z-20"} 
+                  onLongPress={() => { 
+                      LayoutAnimation.configureNext({
+                          duration: 100,
+                          update: {
+                              type: LayoutAnimation.Types.linear,
+                              property: LayoutAnimation.Properties.scaleX
+                          },
+                      }); 
+                      toggleButtonInfo('arrivalButton', true)
+                  }}
+                  onPress={() => handleArrived()}
+                >
+                  <>
+                      <View className="w-full h-full items-center justify-center">
+                          {buttonInfo['arrivalButton'] ? (
+                              <>
+                                  <Image
+                                      tintColor='#ffffff'
+                                      source={icons.arrival}
+                                      className="w-[40%] h-[40%]"
+                                      resizeMode='contain'
+                                  />
+                                  <Text className="text-xl text-white font-rmedium">{'ARRIVED'}</Text>
+                              </>
+                          ) : (
+                              <Image 
+                                  tintColor='#ffffff'
+                                  source={icons.arrival}
+                                  className="w-[70%] h-[70%]"
+                                  resizeMode='contain'
+                              />
+                          )}
+                      </View>
+                  </>
+                </TouchableHighlight>
+              </View>
+              <View className={`w-[70%] h-[12%] absolute top-[10%] left-[4%] bg-primary rounded-2xl flex-row py-2`}>
+                <View className="w-[25%] h-full items-center justify-center">
+                  <Image 
+                    tintColor="#ffffff"
+                    source={getDirectionIcon(currentInstruction.text)}
+                    className="w-[80%] h-[80%]"
+                    resizeMode='contain'
+                  />
+                </View>
+                <View className="w-[75%] h-full px-2">
+                  <Text className={`text-2xl text-white font-psemibold`}>
+                    {currentInstruction.turnDistance}
+                  </Text>
+                  <Text numberOfLines={2} className={`text-base text-white font-pregular text-justify`}>
+                    {currentInstruction.text}
+                  </Text>
+                </View>
+              </View>
+              <View className={`w-[35%] h-[6%] absolute top-[24%] left-[4%] bg-primary rounded-lg overflow-hidden`}>
+                <TouchableOpacity className="w-full h-full flex-row" onPress={handleReroute}>
+                  <View className="w-[40%] h-full items-center justify-center">
+                    <Image 
+                      tintColor="#ffffff"
+                      source={icons.refresh}
+                      className="w-[60%] h-[60%]"
+                      resizeMode='contain'
+                    />
+                  </View>
+                  <View className="w-[60%] h-full px-2 justify-center">
+                    <Text className={`text-sm text-white font-pmedium`}>
+                      {'Re-route'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </>
           ) : (
             <></>
           )}
@@ -2660,6 +2722,23 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
             <View className={`w-[2%] h-[80%] ${colorGenerator(selectedRespoReport?.handler)}`} />
             <View className="w-[94%] h-full ml-3 justify-center">
               <Text className={`text-xl ${selectedRespoReport?.flag === false ? 'text-red-500' : 'text-black'} font-rmedium`}>{translate(selectedRespoReport?.report_type)}</Text>
+            </View>
+            {/* Arrival Time */}
+            <View className="w-[50%] h-full absolute -right-2 bg-primary rounded-lg flex-row items-center justify-between">
+              <View className="w-[35%] h-full items-center justify-center">
+                <Text className={`text-base text-white font-rmedium pt-2`}>{`${selectedReportETA?.time}`}</Text>
+                <Text className={`text-sm text-white font-rmedium -top-2`}>{'arrival'}</Text>
+              </View>
+              <View className="w-[1px] h-[80%] bg-white"/>
+              <View className="w-[30%] h-full items-center justify-center">
+                <Text className={`text-base text-white font-rmedium pt-2`}>{`${selectedReportETA?.eta}`}</Text>
+                <Text className={`text-sm text-white font-rmedium -top-2`}>{'min'}</Text>
+              </View>
+              <View className="w-[1px] h-[80%] bg-white"/>
+              <View className="w-[30%] h-full items-center justify-center">
+                <Text className={`text-base text-white font-rmedium pt-2`}>{`${selectedReportETA?.distance}`}</Text>
+                <Text className={`text-sm text-white font-rmedium -top-2`}>{'km'}</Text>
+              </View>
             </View>
           </View>
           {/* Text Container 1 */}

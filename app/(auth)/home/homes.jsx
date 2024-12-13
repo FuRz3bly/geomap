@@ -1,6 +1,7 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { View, Text, Image, TouchableOpacity, TouchableHighlight, ScrollView, ActivityIndicator, BackHandler, Dimensions, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { getDistance, getPreciseDistance } from 'geolib';
 import { Audio } from 'expo-av';
 import * as Notifications from 'expo-notifications';
 import { BarChart, LineChart } from 'react-native-chart-kit';
@@ -13,10 +14,8 @@ import { app } from '../../../firebaseConfig';
 const db = getFirestore(app);
 
 import UserContext from '../../../components/UserContext';
-import ToolsContext from '../../../components/ToolsContext';
+import ToolsContext, { getID, containID, getReport, containReport, translate, getTheme, setTheme, getTitle, setTitle } from '../../../components/ToolsContext';
 import { Success, Failed, Menu } from '../../../components/modals';
-import { translate, getTitle, setTitle } from '../../../components/ToolsContext';
-
 import { images, icons } from '../../../constants';
 
 // User Pages
@@ -92,6 +91,14 @@ const HomeScreen = () => {
     const [reportSelection, setReportSelection] = useState(null); // Report Type Selected
     const [dashboardSelection, setDashboardSelection] = useState('nearby'); // Dashboard Mode Selection Container
     const [expandDashboard, setExpandDashboard] = useState(false); // Expand Dashboard
+    const [userAmenity, setUserAmenity] = useState(null); // User's Amenity Container
+    const [respoReports, setRespoReports] = useState([]); // All Responder Reports
+    const [sortedReports, setSortedReports] = useState([]); // Sort Reports Per Category
+    const [reportsToday, setReportsToday] = useState([]); // Seperate Container for Reports Today
+    const [receivedReports, setReceivedReports] = useState([]); // Seperate Containter for Received Reports
+    const [expandedStates, setExpandedStates] = useState({}); // Expand States Per Reports
+    const [selectedReport, setSelectedReport] = useState(null); // Selected Report
+    const [receivedReport, setReceivedReport] = useState(null); // Received Report
 
     // Admin Variables
     const [data, setData] = useState({
@@ -118,7 +125,6 @@ const HomeScreen = () => {
         },
     });
     
-
     // Enable LayoutAnimation on Android
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
         UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -133,6 +139,36 @@ const HomeScreen = () => {
         // Cleanup the timeout if the component unmounts
         return () => clearTimeout(timer);
     }, []);
+
+    // Disable the back button action when the component is mounted
+    useEffect(() => {
+        const backAction = () => {
+            handleBackButton();
+            return true; 
+        };
+        const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+        // Cleanup the event listener when the component unmounts
+        return () => backHandler.remove();
+    }, []);
+
+    // Store User's Amenity Data
+    useEffect(() => {
+        // Fetch and set the user's amenity directly
+        if (user?.amenity_id && isResponder) {
+            const userAmenityDoc = doc(db, 'amenity', user.amenity_id);
+            const unsubscribeUserAmenity = onSnapshot(userAmenityDoc, (doc) => {
+                if (doc.exists()) {
+                    setUserAmenity({ id: doc.id, ...doc.data() });
+                } else {
+                    //console.log('User amenity not found');
+                }
+            }, error => {
+                console.error('Error fetching user amenity: ', error);
+            });
+    
+            return () => unsubscribeUserAmenity();
+        }
+    }, [user, isResponder]);
 
     // Provides Greeting if Morning, Afternoon and Evening
     const getGreeting = () => {
@@ -244,6 +280,118 @@ const HomeScreen = () => {
 
         return { labels, data };
     };
+
+    // Helper function to extract the relevant address parts
+    const getRelevantAddressParts = (address) => {
+        const parts = address.split(',').map(part => part.trim());
+        if (parts.length > 1 && parts[parts.length - 1].toUpperCase() === 'PH') {
+            return parts.slice(-3).slice(0, 2).join(', '); // Get the two parts before 'PH'
+        }
+        return parts.slice(-2).join(', '); // Get the last two parts
+    };
+
+    // Function to convert Firestore timestamp to a formatted time string
+    const formatTime = (timestamp) => {
+        const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
+        let hours = date.getHours();
+        const minutes = date.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12; // the hour '0' should be '12'
+        const minutesStr = minutes < 10 ? '0' + minutes : minutes;
+        return `${hours}:${minutesStr} ${ampm}`;
+    };
+
+    // Function to convert Firestore timestamp to a formatted date string (MM/DD/YYYY)
+    const formatDate = (timestamp) => {
+        const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
+        const month = date.getMonth() + 1; // Months are 0-based, so add 1
+        const day = date.getDate();
+        const year = date.getFullYear();
+        const monthStr = month < 10 ? '0' + month : month; // Add leading zero if needed
+        const dayStr = day < 10 ? '0' + day : day; // Add leading zero if needed
+        return `${monthStr}/${dayStr}/${year}`; // Format as MM/DD/YYYY
+    };
+
+    // Function to count contributors
+    const countContributors = (report) => {
+        let count = 0;
+
+        // Check if user_report exists and has a full_name field
+        if (report.user_report && report.user_report.full_name) {
+            count += 1;
+        }
+
+        // Check if responder exists and has a full_name field
+        if (report.responder && report.responder.full_name) {
+            count += 1;
+        }
+
+        if (report.responders && Array.isArray(report.responders)) {
+            count += report.responders.length;
+        }
+
+        return count;
+    };
+
+    // Color Generator Function
+    const colorGenerator = (key) => {
+        const colorKey = dictionary[key + '_color'];
+        return colorKey;
+    };
+
+    // Sort Reports Nearby
+    const sortNearbyReports = (reports) => {
+        // Step 1: Filter reports with status 'waiting'
+        const filteredReports = reports.filter(report => {
+            if (report.report_status !== 'waiting') return false;
+    
+            const userAmenityServices = userAmenity.services.reduce((acc, serviceObj) => {
+                const [key, value] = Object.entries(serviceObj)[0];
+                if (value) acc.push(key);
+                return acc;
+            }, []);
+    
+            const reportServices = report.services || [];
+            const handlerMatches = report.handler === userAmenity.type; // Check handler match
+    
+            // Include if at least one service matches or handler matches
+            const hasMatchingService = reportServices.some(service => userAmenityServices.includes(service));
+    
+            return hasMatchingService || (reportServices.length === 0 && handlerMatches);
+        });
+    
+        // Step 2: Add reports with status 'received' and matching amenity ID
+        const receivedReports = reports.filter(report => 
+            report.report_status === 'received' && report.responder?.amenity?.id === userAmenity.id
+        );
+    
+        // Combine the two lists and remove duplicates
+        const combinedReports = [...filteredReports, ...receivedReports.filter(
+            receivedReport => !filteredReports.some(report => report.id === receivedReport.id)
+        )];
+    
+        // Step 3: Sort by distance
+        const sortedByDistance = combinedReports
+            .map(report => {
+                const distanceInMeters = getDistance(
+                    { latitude: userAmenity.location.latitude, longitude: userAmenity.location.longitude },
+                    { latitude: report.report_location.latitude, longitude: report.report_location.longitude }
+                );
+    
+                // Format distance as 'm' or 'km'
+                const formattedDistance =
+                    distanceInMeters < 1000
+                        ? `${distanceInMeters.toFixed(0)} m`
+                        : `${(distanceInMeters / 1000).toFixed(2)} km`;
+    
+                return { ...report, distance: formattedDistance };
+            })
+            .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance)) // Sort by numerical distance
+            .slice(0, 10); // Take the top 10 closest reports
+    
+        setSortedReports(sortedByDistance);
+    };    
 
     // Check if user has pending and approved requests
     /* useEffect(() => {
@@ -541,16 +689,52 @@ const HomeScreen = () => {
         }
     }, [isAdmin, typeAdmin]);
 
-    // Disable the back button action when the component is mounted
+    // Real-time listener of Reports in Municipality
     useEffect(() => {
-        const backAction = () => {
-            handleBackButton();
-            return true; 
-        };
-        const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
-        // Cleanup the event listener when the component unmounts
-        return () => backHandler.remove();
-    }, []);
+        if (userAmenity && isResponder) {
+          const amenityAddressParts = userAmenity.address
+            .split(',')
+            .map(part => part.trim().toLowerCase())
+            .filter(part => part !== 'cavite');
+    
+          const unsubscribeReports = onSnapshot(collection(db, 'reports'), snapshot => {
+            const filteredReports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+              .filter(report => {
+                const reportAddressMatch = report.report_address
+                  .split(',')
+                  .map(part => part.trim().toLowerCase())
+                  .filter(part => part !== 'cavite')
+                  .some(part => amenityAddressParts.includes(part));
+    
+                const responderAmenityAddressMatch = report.responder?.amenity?.address
+                  .split(',')
+                  .map(part => part.trim().toLowerCase())
+                  .filter(part => part !== 'cavite')
+                  .some(part => amenityAddressParts.includes(part));
+    
+                return report.responder?.amenity?.id === userAmenity.id || reportAddressMatch || responderAmenityAddressMatch;
+              });
+    
+            setRespoReports(filteredReports);
+            sortNearbyReports(filteredReports);
+          }, error => {
+            console.error('Error fetching reports: ', error);
+          });
+    
+          return () => unsubscribeReports();
+        }
+    }, [userAmenity, isResponder]);
+
+    useEffect(() => {
+        // Initialize expanded states for new sorted reports
+        const newExpandedStates = Array.isArray(sortedReports)
+          ? sortedReports.reduce((acc, report) => {
+              acc[report.id] = false;
+              return acc;
+            }, {})
+          : {};
+        setExpandedStates(newExpandedStates);
+    }, [sortedReports]);
 
     // Icon Generator Function
     const icogenerator = (key) => {
@@ -704,15 +888,63 @@ const HomeScreen = () => {
     const handleIntensity = () => {
         setMapSelect('intensity')
         handleChangePage('home/maps')
-    };
+    };   
 
     // Dashboard Mode Function
     const changeDashboard = (value) => {
+        // Store Value
         setDashboardSelection(value);
+
+        // Value Checking and Sort Reports Per Category
+        if (value === 'nearby') {
+            sortNearbyReports(respoReports);
+        } else if (value === 'recent') {
+            // Sort by recent timestamp
+            const sortedByRecent = respoReports.sort((a, b) => {
+                const timestampA = a.report_photos?.[0]?.timestamp?.toMillis() || 0;
+                const timestampB = b.report_photos?.[0]?.timestamp?.toMillis() || 0;
+                return timestampB - timestampA;
+            }).slice(0, 10);
+
+            // Separate today's reports
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const reportsToday = sortedByRecent.filter(report => {
+                const reportDate = new Date(report.report_photos?.[0]?.timestamp?.toMillis());
+                return reportDate >= today;
+            });
+
+            setSortedReports(sortedByRecent);
+            setReportsToday(reportsToday);
+        } else if (value === 'active') {
+            // Sort by status and distance
+            const receivedReports = respoReports.filter(report => report.report_status === 'received')
+            .map(report => {
+                const distance = getDistance(
+                { latitude: userAmenity.location.latitude, longitude: userAmenity.location.longitude },
+                { latitude: report.report_location.latitude, longitude: report.report_location.longitude }
+                );
+                return { ...report, distance };
+            }).sort((a, b) => a.distance - b.distance).slice(0, 5);
+
+            const respondedReports = respoReports.filter(report => report.report_status === 'responded')
+            .map(report => {
+                const distance = getDistance(
+                { latitude: userAmenity.location.latitude, longitude: userAmenity.location.longitude },
+                { latitude: report.report_location.latitude, longitude: report.report_location.longitude }
+                );
+                return { ...report, distance };
+            }).sort((a, b) => a.distance - b.distance).slice(0, 5);
+
+            setSortedReports(respondedReports);
+            setReceivedReports(receivedReports)
+        } else {
+            return;
+        }
     };
 
     // Expand Report
-    const toggleExpandDashboard = (value) => {
+    const toggleExpandDashboard = (id) => {
         LayoutAnimation.configureNext({
             duration: 200,
             update: {
@@ -720,12 +952,61 @@ const HomeScreen = () => {
                 property: LayoutAnimation.Properties.scaleX
             },
         });
-        setExpandDashboard(value);
+        setExpandedStates(prevStates => ({
+            ...prevStates,
+            [id]: !prevStates[id]
+        }));
     };
 
     // Template Button
-    const handleOK = () => {
-        return;
+    const handleOK = (value) => {
+        console.log(value);
+    };
+
+    // Go to Report Screen
+    const handleMoreDetails = (id) => {
+        containID(id);
+        handleChangePage('home/details');
+    };
+
+    // Receive Report
+    const handleReceive = (report) => {
+        setReceivedReport(report);
+        handleChangePage('home/maps');
+    };
+
+    // Locate Function
+    const handleLocate = (report) => {
+        setSelectedReport(report);
+        handleChangePage('home/maps');
+    };
+
+    // Flag the Report as False
+    const handleFlag = async (id) => {
+        const reportRef = doc(db, 'reports', id);
+      
+        try {
+          await updateDoc(reportRef, {
+            flag: false,
+          });
+          console.log('Flag updated to false');
+        } catch (error) {
+          console.error('Error updating flag:', error);
+        }
+    };
+
+    // Handle to Request Delete
+    const handleRequestDelete = async (id) => {
+        const reportRef = doc(db, 'reports', id);
+      
+        try {
+          await updateDoc(reportRef, {
+            request: 'delete',
+          });
+          console.log('Request to Delete Report');
+        } catch (error) {
+          console.error('Error requesting deletion:', error);
+        }
     };
 
     const { chartData, newestTimestamp } = data.requests;
@@ -758,54 +1039,31 @@ const HomeScreen = () => {
                         <View className="w-[60%] h-full justify-center items-center">
                             {(isAdmin || isResponder) && title === 'home/homes' ? (
                                 <>
-                                    {isResponder ? (
-                                        <View className="w-full h-[40%] rounded-2xl flex-row overflow-hidden border-[1px] border-primary-125 z-10">
-                                            {/* Nearby */}
-                                            <View className="w-1/3 h-full">
-                                                <TouchableHighlight underlayColor={'#86ebaa'} className={`w-full h-full items-center justify-center ${dashboardSelection === 'nearby' ? 'bg-primary-125' : 'bg-primary'}`} onPress={() => changeDashboard('nearby')} disabled={dashboardSelection === 'nearby'}>
-                                                    <Text className={`${dashboardSelection === 'nearby' ? 'text-white font-psemibold' : 'text-primary-125 font-pregular'} text-sm`}>{'Nearby'}</Text>
-                                                </TouchableHighlight>
-                                            </View>
-                                            {/* Active */}
-                                            <View className="w-1/3 h-full">
-                                                <TouchableHighlight underlayColor={'#86ebaa'} className={`w-full h-full items-center justify-center ${dashboardSelection === 'active' ? 'bg-primary-125' : 'bg-primary'} border-x-[1px] border-primary-125`} onPress={() => changeDashboard('active')} disabled={dashboardSelection === 'active'}>
-                                                    <Text className={`${dashboardSelection === 'active' ? 'text-white font-psemibold' : 'text-primary-125 font-pregular'} text-sm`}>{'Active'}</Text>
-                                                </TouchableHighlight>
-                                            </View>
-                                            {/* All */}
-                                            <View className="w-1/3 h-full">
-                                                <TouchableHighlight underlayColor={'#86ebaa'} className={`w-full h-full items-center justify-center ${dashboardSelection === 'all' ? 'bg-primary-125' : 'bg-primary'}`} onPress={() => changeDashboard('all')} disabled={dashboardSelection === 'all'}>
-                                                    <Text className={`${dashboardSelection === 'all' ? 'text-white font-psemibold' : 'text-primary-125 font-pregular'} text-sm`}>{'All'}</Text>
-                                                </TouchableHighlight>
-                                            </View>
-                                        </View>
-                                     ) : (
-                                        <TouchableOpacity 
-                                            className="w-full h-full items-center justify-center"
-                                            onPress={() => {
-                                                LayoutAnimation.configureNext({
-                                                    duration: 400,
-                                                    update: {
-                                                        type: LayoutAnimation.Types.easeInEaseOut,
-                                                        property: LayoutAnimation.Properties.scaleXY
-                                                    },
-                                                });
-                                                setExpandTitle(!expandTitle);
-                                            }}
-                                            activeOpacity={0.8}
-                                        >
-                                            {expandTitle ? (
-                                                <Text className="font-rmedium text-white text-xl">{'Dashboard'}</Text>
-                                            ) : (
-                                                <Image
-                                                    tintColor='#ffffff'
-                                                    source={icons.dashboard}
-                                                    className="w-[30%] h-[30%]"
-                                                    resizeMode='contain'
-                                                />
-                                            )}
-                                        </TouchableOpacity>
-                                     )}
+                                    <TouchableOpacity 
+                                        className="w-full h-full items-center justify-center"
+                                        onPress={() => {
+                                            LayoutAnimation.configureNext({
+                                                duration: 400,
+                                                update: {
+                                                    type: LayoutAnimation.Types.easeInEaseOut,
+                                                    property: LayoutAnimation.Properties.scaleXY
+                                                },
+                                            });
+                                            setExpandTitle(!expandTitle);
+                                        }}
+                                        activeOpacity={0.8}
+                                    >
+                                        {expandTitle ? (
+                                            <Text className="font-rmedium text-white text-xl">{'Dashboard'}</Text>
+                                        ) : (
+                                            <Image
+                                                tintColor='#ffffff'
+                                                source={icons.dashboard}
+                                                className="w-[30%] h-[30%]"
+                                                resizeMode='contain'
+                                            />
+                                        )}
+                                    </TouchableOpacity>
                                 </>
                             ) : (
                                 <>
@@ -853,6 +1111,30 @@ const HomeScreen = () => {
                             </TouchableOpacity>
                         </View>
                     </View>
+                    {isResponder && title === 'home/homes' && (
+                        <View className="w-full h-[6%] bg-primary items-center z-10">
+                            <View className="w-[90%] h-[80%] rounded-2xl flex-row overflow-hidden border-[1px] border-primary-125 z-10 absolute -top-[10%]">
+                                {/* Nearby */}
+                                <View className="w-1/3 h-full">
+                                    <TouchableHighlight underlayColor={'#86ebaa'} className={`w-full h-full items-center justify-center ${dashboardSelection === 'nearby' ? 'bg-primary-125' : 'bg-primary'}`} onPress={() => changeDashboard('nearby')} disabled={dashboardSelection === 'nearby'}>
+                                        <Text className={`${dashboardSelection === 'nearby' ? 'text-white font-psemibold' : 'text-primary-125 font-pregular'} text-base`}>{'Nearby'}</Text>
+                                    </TouchableHighlight>
+                                </View>
+                                {/* Active */}
+                                <View className="w-1/3 h-full">
+                                    <TouchableHighlight underlayColor={'#86ebaa'} className={`w-full h-full items-center justify-center ${dashboardSelection === 'recent' ? 'bg-primary-125' : 'bg-primary'} border-x-[1px] border-primary-125`} onPress={() => changeDashboard('recent')} disabled={dashboardSelection === 'recent'}>
+                                        <Text className={`${dashboardSelection === 'recent' ? 'text-white font-psemibold' : 'text-primary-125 font-pregular'} text-base`}>{'Recent'}</Text>
+                                    </TouchableHighlight>
+                                </View>
+                                {/* Active */}
+                                <View className="w-1/3 h-full">
+                                    <TouchableHighlight underlayColor={'#86ebaa'} className={`w-full h-full items-center justify-center ${dashboardSelection === 'active' ? 'bg-primary-125' : 'bg-primary'} border-primary-125`} onPress={() => changeDashboard('active')} disabled={dashboardSelection === 'active'}>
+                                        <Text className={`${dashboardSelection === 'active' ? 'text-white font-psemibold' : 'text-primary-125 font-pregular'} text-base`}>{'Active'}</Text>
+                                    </TouchableHighlight>
+                                </View>
+                            </View>
+                        </View>
+                    )}
                 </>
             ) : (
                 <View className={`w-full h-[3.5%] z-10 ${mapSelect === 'intensity' ? 'bg-primary-125' : 'bg-primary'} items-center justify-center`}>
@@ -966,7 +1248,7 @@ const HomeScreen = () => {
                 ) : title === 'home/details' ? (
                     <DetailScreen changePage={handleChangePage} backPage={handleBackButton} status={setStatus} savings={setStatusSuccess} loadings={setStatusLoading} />
                 ) : title === 'home/maps' ? (
-                    <MapScreen selectedMap={mapSelect} changeMap={setMapSelect} changePage={handleChangePage} backPage={handleBackButton} status={setStatus} savings={setStatusSuccess} loadings={setStatusLoading} fails={setStatusFailed} hideMenu={toggleMenu}/>
+                    <MapScreen selectedMap={mapSelect} changeMap={setMapSelect} changePage={handleChangePage} backPage={handleBackButton} status={setStatus} savings={setStatusSuccess} loadings={setStatusLoading} fails={setStatusFailed} hideMenu={toggleMenu} dashboardReport={selectedReport} dashboardReceive={receivedReport} setDashboardReceive={setReceivedReport}/>
                 ) : title === 'home/reports' ? (
                     <ReportScreen changePage={handleChangePage} backPage={handleBackButton} status={setStatus} savings={setStatusSuccess} loadings={setStatusLoading} fails={setStatusFailed} hideMenu={toggleMenu} fireBuilding={reportBuildingFire} quickAction={setReportBuildingFire} />
                 ) : title === 'home/statistics' ? (
@@ -1244,20 +1526,404 @@ const HomeScreen = () => {
                         ) : isResponder ? (
                             <View className="w-full h-full bg-white items-center">
                                 {/* Reports Collection */}
-                                <View className="w-full h-[85%] top-[4%]">
+                                <View className="w-full h-[90%] top-[3%] mt-2">
                                     <ScrollView showsVerticalScrollIndicator={true} className="w-full h-full" contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
-                                        {!expandDashboard ? (
-                                            <View className="w-[96%] h-fit">
-                                                <TouchableHighlight underlayColor={'#86ebaa'} className="w-full h-fit bg-white border-[1px] border-primary mt-4 rounded-3xl overflow-hidden" onPress={() => toggleExpandDashboard(true)}>
-                                                    <>
-                                                        {/* Description */}
-                                                        <View className="w-[90%] h-fit mb-[1%] mt-[4%] px-4">
-                                                            <Text className="text-primary-300 font-psemibold text-base">{'Trece Martires, Cavite - Structural Fire'}</Text>
+                                        <View className="w-full h-2 my-1"/>
+                                        {/* Nearby Category */}
+                                        {dashboardSelection === 'nearby' && (
+                                            sortedReports?.length > 0 ? (
+                                                sortedReports?.map((report) => (
+                                                    !expandedStates[report?.report_id] ? (
+                                                        <View key={report.report_id} className="w-[96%] h-fit">
+                                                            <TouchableHighlight
+                                                                underlayColor={'#fffd99'}
+                                                                className={`w-full h-fit bg-white border-[1px] border-primary mt-4 rounded-3xl overflow-hidden`}
+                                                                onPress={() => toggleExpandDashboard(report.report_id)}
+                                                            >
+                                                                <>
+                                                                    {/* Report Title */}
+                                                                    <View className="w-[90%] h-fit mb-[1%] mt-[4%] px-4">
+                                                                        <Text className={`text-primary-300 font-psemibold text-sm`}>
+                                                                            {`${getRelevantAddressParts(report.report_address)} - ${translate(report.report_type)}`}
+                                                                        </Text>
+                                                                        {/* Status Dot */}
+                                                                        <View className={`w-3 h-3 ${colorGenerator(report.report_status)} rounded-full absolute -right-[7%]`}/>
+                                                                    </View>
+                                                                    {/* Address */}
+                                                                    <View className="w-full h-fit mb-[4%] px-4 justify-center">
+                                                                        <Text className="w-[68%] text-slate-500 font-pregular text-xs">{`${report.report_address} - ${report.distance}`}</Text>
+                                                                        {/* Responders and User Count */}
+                                                                        <View className="w-[25%] h-8 absolute right-4 flex-row justify-end">
+                                                                            <View className="w-[40%] h-full items-center justify-center">
+                                                                                <Image
+                                                                                    tintColor={'#64748b'}
+                                                                                    source={icons.aboutUs}
+                                                                                    className="w-[50%] h-[50%]"
+                                                                                    resizeMode='contain'
+                                                                                />
+                                                                            </View>
+                                                                            <View className="h-full justify-center">
+                                                                                <Text className={`text-slate-500 font-pregular text-xs text-right`}>
+                                                                                    {countContributors(report)}
+                                                                                </Text>
+                                                                            </View>
+                                                                        </View>
+                                                                    </View>
+                                                                </>
+                                                            </TouchableHighlight>
                                                         </View>
-                                                        {/* Address of Emergency */}
+                                                    ) : (
+                                                        <View key={report.report_id} className="w-[96%] h-fit items-center justify-center">
+                                                            {/* Expanded View */}
+                                                            <View className={`w-full h-fit bg-white border-[1px] border-primary mt-4 rounded-3xl overflow-hidden`}>
+                                                                {/* Status Top */}
+                                                                <View className="w-full h-8 mt-[4%] mb-[2%] px-4">
+                                                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="w-full h-full" >
+                                                                        {/* Time of Emergency */}
+                                                                        <View className={`h-full bg-primary rounded-3xl justify-center items-center flex-row overflow-hidden mr-2 px-2`}>
+                                                                            {/* Time Icons */}
+                                                                            <View className="w-6 h-full items-center justify-center">
+                                                                                <Image
+                                                                                    tintColor={'#ffffff'}
+                                                                                    source={icons.time}
+                                                                                    className="w-[60%] h-[60%]"
+                                                                                    resizeMode='contain'
+                                                                                />
+                                                                            </View>
+                                                                            {/* Time Text */}
+                                                                            <View className="h-full justify-center pl-[4%]">
+                                                                                <Text className="text-white font-pregular text-xs">
+                                                                                    {formatTime(report.incident_date || report.report_date)}
+                                                                                </Text>
+                                                                            </View>
+                                                                        </View>
+                                                                        {/* Distance of Emergency */}
+                                                                        <View className={`h-full bg-primary rounded-3xl justify-center items-center flex-row overflow-hidden mr-2 px-2`}>
+                                                                            {/* Distance Icons */}
+                                                                            <View className="w-6 h-full items-center justify-center">
+                                                                                <Image
+                                                                                    tintColor={'#ffffff'}
+                                                                                    source={icons.address}
+                                                                                    className="w-[60%] h-[60%]"
+                                                                                    resizeMode='contain'
+                                                                                />
+                                                                            </View>
+                                                                            {/* Distance Text */}
+                                                                            <View className="h-full justify-center pl-[4%]">
+                                                                                <Text className="text-white font-pregular text-xs">
+                                                                                    {report.distance}
+                                                                                </Text>
+                                                                            </View>
+                                                                        </View>
+                                                                        {/* Ambulance Needed */}
+                                                                        {report.services.includes('ambulance') && (
+                                                                            <View className="h-full bg-primary rounded-3xl justify-center items-center flex-row overflow-hidden mr-2 pl-2 pr-4">
+                                                                                <View className="w-12 h-full items-center justify-center">
+                                                                                    <Image
+                                                                                    tintColor={'#ffffff'}
+                                                                                    source={icons.ambulance}
+                                                                                    className="w-[70%] h-[70%]"
+                                                                                    resizeMode="contain"
+                                                                                    />
+                                                                                </View>
+                                                                                <View className="h-full justify-center">
+                                                                                    <Text className="text-white font-pregular text-xs">
+                                                                                        {'Ambulance Needed'}
+                                                                                    </Text>
+                                                                                </View>
+                                                                            </View>
+                                                                        )}
+                                                                        {/* Firetruck Needed */}
+                                                                        {report.services.includes('firetruck') && (
+                                                                            <View className="h-full bg-primary rounded-3xl justify-center items-center flex-row overflow-hidden mr-2 pl-2 pr-4">
+                                                                                <View className="w-12 h-full items-center justify-center">
+                                                                                    <Image
+                                                                                    tintColor={'#ffffff'}
+                                                                                    source={icons.fireTruck}
+                                                                                    className="w-[70%] h-[70%]"
+                                                                                    resizeMode="contain"
+                                                                                    />
+                                                                                </View>
+                                                                                <View className="h-full justify-center">
+                                                                                    <Text className="text-white font-pregular text-xs">
+                                                                                        {'Firetruck Needed'}
+                                                                                    </Text>
+                                                                                </View>
+                                                                            </View>
+                                                                        )}
+                                                                        {/* ID of Emergency */}
+                                                                        <View className={`h-full bg-primary rounded-3xl justify-center items-center flex-row overflow-hidden mr-2 px-2`}>
+                                                                            <View className="w-6 h-full items-center justify-center">
+                                                                                <Image
+                                                                                    tintColor={'#ffffff'}
+                                                                                    source={icons.reportPoster}
+                                                                                    className="w-[60%] h-[60%]"
+                                                                                    resizeMode='contain'
+                                                                                />
+                                                                            </View>
+                                                                            <View className="h-full justify-center pl-[4%]">
+                                                                                <Text className="text-white font-pregular text-xs">{report.report_id}</Text>
+                                                                            </View>
+                                                                        </View>
+                                                                        {/* Padding Because ScrollView is Retarded */}
+                                                                        <View className={`bg-white ${report.services.length === 1 ? 'mr-16' : report.services.length > 1 ? 'mr-24' : 'mr-10'}`} />
+                                                                    </ScrollView>
+                                                                </View>
+                                                                {/* Report Name */}
+                                                                <View className="w-[90%] h-fit mb-[1%] px-4">
+                                                                <Text className={`text-primary-300 font-psemibold text-sm`}>
+                                                                    {`${getRelevantAddressParts(report.report_address)} - ${translate(report.report_type)}`}
+                                                                </Text>
+                                                                </View>
+                                                                {/* Address */}
+                                                                <View className="w-full h-fit mb-[4%] px-4 justify-center">
+                                                                    <Text className="w-[80%] text-slate-500 font-pregular text-xs">{report.report_address}</Text>
+                                                                    {/* Responders and User Count */}
+                                                                    <View className="w-[20%] h-8 absolute right-4 flex-row justify-end">
+                                                                        <View className="w-[40%] h-full items-center justify-center">
+                                                                            <Image
+                                                                                tintColor={'#64748b'}
+                                                                                source={icons.aboutUs}
+                                                                                className="w-[70%] h-[70%]"
+                                                                                resizeMode='contain'
+                                                                            />
+                                                                        </View>
+                                                                        <View className="h-full justify-center">
+                                                                            <Text className={`text-slate-500 font-pregular text-sm text-right`}>{countContributors(report)}</Text>
+                                                                        </View>
+                                                                    </View>
+                                                                </View>
+                                                                {/* Expanded Stuff */}
+                                                                <View className="w-full h-14 justify-center">
+                                                                    <TouchableHighlight
+                                                                        underlayColor={'#fffd99'}
+                                                                        className={`w-full h-full flex-row bg-primary items-center px-4`}
+                                                                        onPress={() => toggleExpandDashboard(report.report_id)}
+                                                                    >
+                                                                        <>
+                                                                        {/* Handler Type Icon */}
+                                                                        <View className="w-[10%] h-[80%] justify-center">
+                                                                            <Image
+                                                                                tintColor={'#ffffff'}
+                                                                                source={report.handler === 'fire_station' ? icons.fireLogo : report.handler === 'police' ? icons.policeLogo : report.handler === 'disaster' ? icons.disasterLogo : icons.barangayLogo}
+                                                                                className="w-[50%] h-[50%]"
+                                                                                resizeMode='contain'
+                                                                            />
+                                                                        </View>
+                                                                        {/* Event Description Text */}
+                                                                        <View className="w-[90%] h-[80%] justify-center">
+                                                                            <Text className="text-white font-pregular text-xs">
+                                                                                {`${translate(report.report_status)}: ${translate(report.report_type)}`}
+                                                                            </Text>
+                                                                        </View>
+                                                                        </>
+                                                                    </TouchableHighlight>
+                                                                    {/* More Details */}
+                                                                    <View className="w-[20%] h-[80%] absolute right-2 z-30">
+                                                                        <TouchableHighlight
+                                                                            underlayColor={'#86ebaa'}
+                                                                            className="w-full h-full items-center justify-center rounded-2xl"
+                                                                            onPress={() => handleMoreDetails(report.report_id)}
+                                                                        >
+                                                                            <Image
+                                                                                tintColor={'#ffffff'}
+                                                                                source={icons.nextArrowBtn}
+                                                                                className="w-[50%] h-[50%]"
+                                                                                resizeMode='contain'
+                                                                            />
+                                                                        </TouchableHighlight>
+                                                                    </View>
+                                                                </View>
+                                                            </View>
+                                                            {/* Options */}
+                                                            <View className="w-full h-10 mt-3">
+                                                                <ScrollView className='w-full h-full' horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
+                                                                    {/* Locate Button */}
+                                                                    <TouchableHighlight
+                                                                        className={`h-full bg-white rounded-3xl border-primary border-[1px] overflow-hidden px-6 ml-8`}
+                                                                        underlayColor={'#bfffd6'} 
+                                                                        onPress={() => handleLocate(report)}
+                                                                    >
+                                                                        <View className="h-full justify-center items-center flex-row overflow-hidden">
+                                                                            <View className="w-6 h-full items-center justify-center">
+                                                                                <Image
+                                                                                    tintColor={'#57b378'}
+                                                                                    source={icons.mapFocus}
+                                                                                    className="w-[80%] h-[80%]"
+                                                                                    resizeMode='contain'
+                                                                                />
+                                                                            </View>
+                                                                            <View className="h-full justify-center pl-[4%]">
+                                                                                <Text className="text-black font-pregular text-sm">{'Locate'}</Text>
+                                                                            </View>
+                                                                        </View>
+                                                                    </TouchableHighlight>
+                                                                    {/* Flag Button */}
+                                                                    <TouchableHighlight
+                                                                        className={`h-full bg-white rounded-3xl border-yellow-500 border-[1px] overflow-hidden px-6 mx-2`}
+                                                                        underlayColor={'#fffd99'} 
+                                                                        onPress={() => handleFlag(report.report_id)}
+                                                                    >
+                                                                        <View className="h-full justify-center items-center flex-row overflow-hidden">
+                                                                            <View className="w-6 h-full items-center justify-center">
+                                                                                <Image
+                                                                                    tintColor={'#eab308'}
+                                                                                    source={icons.flag}
+                                                                                    className="w-[80%] h-[80%]"
+                                                                                    resizeMode='contain'
+                                                                                />
+                                                                            </View>
+                                                                            <View className="h-full justify-center pl-[4%]">
+                                                                                <Text className="text-black font-pregular text-sm">{'Flag False'}</Text>
+                                                                            </View>
+                                                                        </View>
+                                                                    </TouchableHighlight>
+                                                                    {/* Request for Deletion Button */}
+                                                                    <TouchableHighlight
+                                                                        className={`h-full bg-white rounded-3xl border-red-500 border-[1px] overflow-hidden px-6 mr-8`}
+                                                                        underlayColor={'#ffb0b0'}
+                                                                        onPress={() => handleRequestDelete(report.report_id)}
+                                                                    >
+                                                                        <View className="h-full justify-center items-center flex-row overflow-hidden">
+                                                                            <View className="w-6 h-full items-center justify-center">
+                                                                                <Image
+                                                                                    tintColor={'#e62210'}
+                                                                                    source={icons.deletePhoto}
+                                                                                    className="w-[50%] h-[50%]"
+                                                                                    resizeMode='contain'
+                                                                                />
+                                                                            </View>
+                                                                            <View className="h-full justify-center pl-[4%]">
+                                                                                <Text className="text-black font-pregular text-sm">{'Request for Deletion'}</Text>
+                                                                            </View>
+                                                                        </View>
+                                                                    </TouchableHighlight>
+                                                                </ScrollView>
+                                                            </View>
+                                                        </View>
+                                                    )
+                                                ))
+                                            ) : (
+                                                <View className="w-full h-12 items-center justify-center bg-primary-125 pt-2 -top-4">
+                                                    <Text className="text-base text-white font-pmedium text-center">{`Stay tuned for reports.`}</Text>
+                                                </View>
+                                            )
+                                        )}
+                                        {/** Recent Category
+                                         * Reports Today
+                                         */}
+                                        {dashboardSelection === 'recent' && reportsToday?.length > 0 &&
+                                            <View className="w-full h-12 items-center justify-center bg-primary-125 pt-2 -top-4">
+                                                <Text className="text-base text-white font-pmedium text-center">{`Reports Today`}</Text>
+                                            </View>
+                                        }
+                                        {dashboardSelection === 'recent' && reportsToday?.map((report) => (
+                                            !expandedStates[report?.report_id] ? (
+                                                <View key={report.report_id} className="w-[96%] h-fit">
+                                                    <TouchableHighlight
+                                                        underlayColor={'#fffd99'}
+                                                        className={`w-full h-fit bg-white border-[1px] border-primary mt-4 rounded-3xl overflow-hidden`}
+                                                        onPress={() => toggleExpandDashboard(report.report_id)}
+                                                    >
+                                                        <>
+                                                            {/* Report Title */}
+                                                            <View className="w-[90%] h-fit mb-[1%] mt-[4%] px-4">
+                                                                <Text className={`text-primary-300 font-psemibold text-sm`}>
+                                                                    {`${getRelevantAddressParts(report.report_address)} - ${translate(report.report_type)}`}
+                                                                </Text>
+                                                            </View>
+                                                            {/* Address */}
+                                                            <View className="w-full h-fit mb-[4%] px-4 justify-center">
+                                                                <Text className="w-[68%] text-slate-500 font-pregular text-xs">{report.report_address}</Text>
+                                                                {/* Responders and User Count */}
+                                                                <View className="w-[25%] h-8 absolute right-4 flex-row justify-end">
+                                                                    <View className="w-[40%] h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#64748b'}
+                                                                            source={icons.aboutUs}
+                                                                            className="w-[50%] h-[50%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center">
+                                                                        <Text className={`text-slate-500 font-pregular text-xs text-right`}>
+                                                                            {countContributors(report)}
+                                                                        </Text>
+                                                                    </View>
+                                                                </View>
+                                                            </View>
+                                                        </>
+                                                    </TouchableHighlight>
+                                                </View>
+                                            ) : (
+                                                <View key={report.report_id} className="w-[96%] h-fit items-center justify-center">
+                                                    {/* Expanded View */}
+                                                    <View className={`w-full h-fit bg-white border-[1px] border-primary mt-4 rounded-3xl overflow-hidden`}>
+                                                        {/* Status Top */}
+                                                        <View className="w-full h-8 mt-[4%] mb-[2%] px-2">
+                                                            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="w-full h-full" contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
+                                                                {/* Time of Emergency */}
+                                                                <View className={`h-full ml-6 ${colorGenerator(report.report_status)} rounded-3xl justify-center items-center flex-row overflow-hidden px-2`}>
+                                                                    {/* Time Icons */}
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#ffffff'}
+                                                                            source={icons.time}
+                                                                            className="w-[60%] h-[60%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    {/* Time Text */}
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-white font-pregular text-xs">
+                                                                            {formatTime(report.incident_date || report.report_date)}
+                                                                        </Text>
+                                                                    </View>
+                                                                </View>
+                                                                {/* Date of Emergency */}
+                                                                <View className={`h-full mx-2 ${colorGenerator(report.report_status)} rounded-3xl justify-center items-center flex-row overflow-hidden px-2`}>
+                                                                    {/* Date Icons */}
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#ffffff'}
+                                                                            source={icons.date}
+                                                                            className="w-[60%] h-[60%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    {/* Time Text */}
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-white font-pregular text-xs">
+                                                                            {formatDate(report.incident_date || report.report_date)}
+                                                                        </Text>
+                                                                    </View>
+                                                                </View>
+                                                                {/* ID of Emergency */}
+                                                                <View className={`h-full mr-6 ${colorGenerator(report.report_status)} rounded-3xl justify-center items-center flex-row overflow-hidden px-2`}>
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#ffffff'}
+                                                                            source={icons.reportPoster}
+                                                                            className="w-[60%] h-[60%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-white font-pregular text-xs">{report.report_id}</Text>
+                                                                    </View>
+                                                                </View>
+                                                            </ScrollView>
+                                                        </View>
+                                                        {/* Report Name */}
+                                                        <View className="w-[90%] h-fit mb-[1%] px-4">
+                                                        <Text className={`text-primary-300 font-psemibold text-sm`}>
+                                                            {`${getRelevantAddressParts(report.report_address)} - ${translate(report.report_type)}`}
+                                                        </Text>
+                                                        </View>
+                                                        {/* Address */}
                                                         <View className="w-full h-fit mb-[4%] px-4 justify-center">
-                                                            <Text className="w-[80%] text-slate-500 font-pregular text-sm">{'Trece Martires - Indang Road, Trece Martires, Cavite'}</Text>
-                                                            {/* People */}
+                                                            <Text className="w-[80%] text-slate-500 font-pregular text-xs">{report.report_address}</Text>
+                                                            {/* Responders and User Count */}
                                                             <View className="w-[20%] h-8 absolute right-4 flex-row justify-end">
                                                                 <View className="w-[40%] h-full items-center justify-center">
                                                                     <Image
@@ -1268,117 +1934,820 @@ const HomeScreen = () => {
                                                                     />
                                                                 </View>
                                                                 <View className="h-full justify-center">
-                                                                    <Text className="text-slate-500 font-pregular text-sm text-right">{'12'}</Text>
+                                                                    <Text className={`text-slate-500 font-pregular text-sm text-right`}>{countContributors(report)}</Text>
                                                                 </View>
                                                             </View>
                                                         </View>
-                                                    </>
-                                                </TouchableHighlight>
-                                            </View>
-                                        ) : (
-                                            <View className="w-[96%] h-fit bg-white border-[1px] border-primary mt-4 rounded-3xl overflow-hidden">
-                                                {/* Top Status */}
-                                                <View className="w-full h-8 mt-[4%] mb-[2%] px-4">
-                                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="w-full h-full" contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
-                                                        {/* Time of Emergency */}
-                                                        <View className="h-full mx-2 bg-primary rounded-3xl justify-center items-center flex-row overflow-hidden px-2">
-                                                            <View className="w-6 h-full items-center justify-center">
-                                                                <Image
-                                                                    tintColor={'#ffffff'}
-                                                                    source={icons.notificationOn}
-                                                                    className="w-[70%] h-[70%]"
-                                                                    resizeMode='contain'
-                                                                />
+                                                        {/* Expanded Stuff */}
+                                                        <View className="w-full h-14 justify-center">
+                                                            <TouchableHighlight
+                                                                underlayColor={'#fffd99'}
+                                                                className={`w-full h-full flex-row ${colorGenerator(report.handler)} items-center px-4`}
+                                                                onPress={() => toggleExpandDashboard(report.report_id)}
+                                                            >
+                                                                <>
+                                                                {/* Handler Type Icon */}
+                                                                <View className="w-[10%] h-[80%] justify-center">
+                                                                    <Image
+                                                                        tintColor={'#ffffff'}
+                                                                        source={report.handler === 'fire_station' ? icons.fireLogo : report.handler === 'police' ? icons.policeLogo : report.handler === 'disaster' ? icons.disasterLogo : icons.barangayLogo}
+                                                                        className="w-[50%] h-[50%]"
+                                                                        resizeMode='contain'
+                                                                    />
+                                                                </View>
+                                                                {/* Event Description Text */}
+                                                                <View className="w-[90%] h-[80%] justify-center">
+                                                                    <Text className="text-white font-pregular text-xs">
+                                                                        {`${report.report_status.charAt(0).toUpperCase() + report.report_status.slice(1)} Event: ${translate(report.report_type)}`}
+                                                                    </Text>
+                                                                </View>
+                                                                </>
+                                                            </TouchableHighlight>
+                                                            <View className="w-[20%] h-[80%] absolute right-2 z-30">
+                                                                <TouchableHighlight
+                                                                    underlayColor={'#86ebaa'}
+                                                                    className="w-full h-full items-center justify-center rounded-2xl"
+                                                                    onPress={handleOK}
+                                                                >
+                                                                    <Image
+                                                                        tintColor={'#ffffff'}
+                                                                        source={icons.nextArrowBtn}
+                                                                        className="w-[50%] h-[50%]"
+                                                                        resizeMode='contain'
+                                                                    />
+                                                                </TouchableHighlight>
                                                             </View>
-                                                            <View className="h-full justify-center pl-[2%]">
-                                                                <Text className="text-white font-pregular text-sm">{'12:23 PM'}</Text>
-                                                            </View>
-                                                        </View>
-                                                        {/* Address of Emergency */}
-                                                        <View className="h-full mx-2 bg-primary rounded-3xl justify-center items-center flex-row overflow-hidden px-2">
-                                                            <View className="w-6 h-full items-center justify-center">
-                                                                <Image
-                                                                    tintColor={'#ffffff'}
-                                                                    source={icons.address}
-                                                                    className="w-[60%] h-[60%]"
-                                                                    resizeMode='contain'
-                                                                />
-                                                            </View>
-                                                            <View className="h-full justify-center pl-[4%]">
-                                                                <Text className="text-white font-pregular text-sm">{'125.56 km'}</Text>
-                                                            </View>
-                                                        </View>
-                                                        {/* Ambulance Needed */}
-                                                        {/* <View className="w-52 h-full mx-2 bg-primary rounded-3xl justify-center items-center flex-row overflow-hidden px-2">
-                                                            <View className="w-[20%] h-full items-center justify-center">
-                                                                <Image
-                                                                    tintColor={'#ffffff'}
-                                                                    source={icons.ambulance}
-                                                                    className="w-[70%] h-[70%]"
-                                                                    resizeMode='contain'
-                                                                />
-                                                            </View>
-                                                            <View className="w-[80%] h-full justify-center">
-                                                                <Text className="text-white font-pregular text-sm">{'Ambulance Needed'}</Text>
-                                                            </View>
-                                                        </View> */}
-                                                    </ScrollView>
-                                                </View>
-                                                {/* Description */}
-                                                <View className="w-[90%] h-fit mb-[1%] px-4">
-                                                    <Text className="text-primary-300 font-psemibold text-base">{'Trece Martires, Cavite - Structural Fire'}</Text>
-                                                </View>
-                                                {/* Address of Emergency */}
-                                                <View className="w-full h-fit mb-[4%] px-4 justify-center">
-                                                    <Text className="w-[80%] text-slate-500 font-pregular text-sm">{'Trece Martires - Indang Road, Trece Martires, Cavite'}</Text>
-                                                    {/* People */}
-                                                    <View className="w-[20%] h-8 absolute right-4 flex-row justify-end">
-                                                        <View className="w-[40%] h-full items-center justify-center">
-                                                            <Image
-                                                                tintColor={'#64748b'}
-                                                                source={icons.aboutUs}
-                                                                className="w-[70%] h-[70%]"
-                                                                resizeMode='contain'
-                                                            />
-                                                        </View>
-                                                        <View className="h-full justify-center">
-                                                            <Text className="text-slate-500 font-pregular text-sm text-right">{'12'}</Text>
                                                         </View>
                                                     </View>
+                                                    {/* Options */}
+                                                    <View className="w-full h-10 mt-3">
+                                                        <ScrollView className='w-full h-full' horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
+                                                            {/* Locate Button */}
+                                                            <TouchableHighlight
+                                                                className={`h-full bg-white rounded-3xl border-primary border-[1px] overflow-hidden px-6 ml-8`}
+                                                                underlayColor={'#bfffd6'} 
+                                                                onPress={() => handleLocate(report)}
+                                                            >
+                                                                <View className="h-full justify-center items-center flex-row overflow-hidden">
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#57b378'}
+                                                                            source={icons.mapFocus}
+                                                                            className="w-[80%] h-[80%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-black font-pregular text-sm">{'Locate'}</Text>
+                                                                    </View>
+                                                                </View>
+                                                            </TouchableHighlight>
+                                                            {/* Flag Button */}
+                                                            <TouchableHighlight
+                                                                className={`h-full bg-white rounded-3xl border-yellow-500 border-[1px] overflow-hidden px-6 mx-2`}
+                                                                underlayColor={'#fffd99'} 
+                                                                onPress={() => handleFlag(report.report_id)}
+                                                            >
+                                                                <View className="h-full justify-center items-center flex-row overflow-hidden">
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#eab308'}
+                                                                            source={icons.flag}
+                                                                            className="w-[80%] h-[80%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-black font-pregular text-sm">{'Flag False'}</Text>
+                                                                    </View>
+                                                                </View>
+                                                            </TouchableHighlight>
+                                                            {/* Request for Deletion Button */}
+                                                            <TouchableHighlight
+                                                                className={`h-full bg-white rounded-3xl border-red-500 border-[1px] overflow-hidden px-6 mr-8`}
+                                                                underlayColor={'#ffb0b0'}
+                                                                onPress={() => handleRequestDelete(report.report_id)}
+                                                            >
+                                                                <View className="h-full justify-center items-center flex-row overflow-hidden">
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#e62210'}
+                                                                            source={icons.deletePhoto}
+                                                                            className="w-[50%] h-[50%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-black font-pregular text-sm">{'Request for Deletion'}</Text>
+                                                                    </View>
+                                                                </View>
+                                                            </TouchableHighlight>
+                                                        </ScrollView>
+                                                    </View>
                                                 </View>
-                                                {/* Expanded View */}
-                                                <View className="w-full h-14 justify-center">
-                                                    <TouchableHighlight underlayColor={'#86ebaa'} className="w-full h-full flex-row bg-primary items-center px-4" onPress={() => toggleExpandDashboard(false)}>
+                                            )
+                                        ))}
+                                        {/* Recent Reports */}
+                                        {dashboardSelection === 'recent' && sortedReports?.length > 0 &&
+                                            <View className="w-full h-10 items-center justify-center bg-primary-125 pt-2 -top-4">
+                                                <Text className="text-base text-white font-pregular text-center">{`Recent Reports`}</Text>
+                                            </View>
+                                        }
+                                        {dashboardSelection === 'recent' && sortedReports?.map((report) => (
+                                            !expandedStates[report?.report_id] ? (
+                                                <View key={report.report_id} className="w-[96%] h-fit">
+                                                    <TouchableHighlight
+                                                        underlayColor={'#fffd99'}
+                                                        className={`w-full h-fit bg-white border-[1px] border-primary mt-4 rounded-3xl overflow-hidden`}
+                                                        onPress={() => toggleExpandDashboard(report.report_id)}
+                                                    >
                                                         <>
-                                                            {/* Handler Icon */}
-                                                            <View className="w-[10%] h-[80%] justify-center">
-                                                                <Image
-                                                                    tintColor={'#ffffff'}
-                                                                    source={icons.fireLogo}
-                                                                    className="w-[50%] h-[50%]"
-                                                                    resizeMode='contain'
-                                                                />
+                                                            {/* Report Title */}
+                                                            <View className="w-[90%] h-fit mb-[1%] mt-[4%] px-4">
+                                                                <Text className={`text-primary-300 font-psemibold text-sm`}>
+                                                                    {`${getRelevantAddressParts(report.report_address)} - ${translate(report.report_type)}`}
+                                                                </Text>
                                                             </View>
-                                                            {/* Status Event */}
-                                                            <View className="w-[90%] h-[80%] justify-center">
-                                                                <Text className="text-white font-pregular text-sm">{'Active Event: Small House Fire'}</Text>
+                                                            {/* Address */}
+                                                            <View className="w-full h-fit mb-[4%] px-4 justify-center">
+                                                                <Text className="w-[68%] text-slate-500 font-pregular text-xs">{report.report_address}</Text>
+                                                                {/* Responders and User Count */}
+                                                                <View className="w-[25%] h-8 absolute right-4 flex-row justify-end">
+                                                                    <View className="w-[40%] h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#64748b'}
+                                                                            source={icons.aboutUs}
+                                                                            className="w-[50%] h-[50%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center">
+                                                                        <Text className={`text-slate-500 font-pregular text-xs text-right`}>
+                                                                            {countContributors(report)}
+                                                                        </Text>
+                                                                    </View>
+                                                                </View>
                                                             </View>
                                                         </>
                                                     </TouchableHighlight>
-                                                    {/* Next Button */}
-                                                    <View className="w-[20%] h-[80%] absolute right-2 z-30">
-                                                        <TouchableHighlight underlayColor={'#86ebaa'} className="w-full h-full items-center justify-center rounded-2xl" onPress={handleOK}>
-                                                            <Image
-                                                                tintColor={'#ffffff'}
-                                                                source={icons.nextArrowBtn}
-                                                                className="w-[70%] h-[70%]"
-                                                                resizeMode='contain'
-                                                            />
-                                                        </TouchableHighlight>
+                                                </View>
+                                            ) : (
+                                                <View key={report.report_id} className="w-[96%] h-fit items-center justify-center">
+                                                    {/* Expanded View */}
+                                                    <View className={`w-full h-fit bg-white border-[1px] border-primary mt-4 rounded-3xl overflow-hidden`}>
+                                                        {/* Status Top */}
+                                                        <View className="w-full h-8 mt-[4%] mb-[2%] px-2">
+                                                            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="w-full h-full" contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
+                                                                {/* Time of Emergency */}
+                                                                <View className={`h-full ml-6 ${colorGenerator(report.report_status)} rounded-3xl justify-center items-center flex-row overflow-hidden px-2`}>
+                                                                    {/* Time Icons */}
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#ffffff'}
+                                                                            source={icons.time}
+                                                                            className="w-[60%] h-[60%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    {/* Time Text */}
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-white font-pregular text-xs">
+                                                                            {formatTime(report.incident_date || report.report_date)}
+                                                                        </Text>
+                                                                    </View>
+                                                                </View>
+                                                                {/* Date of Emergency */}
+                                                                <View className={`h-full mx-2 ${colorGenerator(report.report_status)} rounded-3xl justify-center items-center flex-row overflow-hidden px-2`}>
+                                                                    {/* Date Icons */}
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#ffffff'}
+                                                                            source={icons.date}
+                                                                            className="w-[60%] h-[60%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    {/* Time Text */}
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-white font-pregular text-xs">
+                                                                            {formatDate(report.incident_date || report.report_date)}
+                                                                        </Text>
+                                                                    </View>
+                                                                </View>
+                                                                {/* ID of Emergency */}
+                                                                <View className={`h-full mr-6 ${colorGenerator(report.report_status)} rounded-3xl justify-center items-center flex-row overflow-hidden px-2`}>
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#ffffff'}
+                                                                            source={icons.reportPoster}
+                                                                            className="w-[60%] h-[60%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-white font-pregular text-xs">{report.report_id}</Text>
+                                                                    </View>
+                                                                </View>
+                                                            </ScrollView>
+                                                        </View>
+                                                        {/* Report Name */}
+                                                        <View className="w-[90%] h-fit mb-[1%] px-4">
+                                                        <Text className={`text-primary-300 font-psemibold text-sm`}>
+                                                            {`${getRelevantAddressParts(report.report_address)} - ${translate(report.report_type)}`}
+                                                        </Text>
+                                                        </View>
+                                                        {/* Address */}
+                                                        <View className="w-full h-fit mb-[4%] px-4 justify-center">
+                                                            <Text className="w-[80%] text-slate-500 font-pregular text-xs">{report.report_address}</Text>
+                                                            {/* Responders and User Count */}
+                                                            <View className="w-[20%] h-8 absolute right-4 flex-row justify-end">
+                                                                <View className="w-[40%] h-full items-center justify-center">
+                                                                    <Image
+                                                                        tintColor={'#64748b'}
+                                                                        source={icons.aboutUs}
+                                                                        className="w-[70%] h-[70%]"
+                                                                        resizeMode='contain'
+                                                                    />
+                                                                </View>
+                                                                <View className="h-full justify-center">
+                                                                    <Text className={`text-slate-500 font-pregular text-sm text-right`}>{countContributors(report)}</Text>
+                                                                </View>
+                                                            </View>
+                                                        </View>
+                                                        {/* Expanded Stuff */}
+                                                        <View className="w-full h-14 justify-center">
+                                                            <TouchableHighlight
+                                                                underlayColor={'#fffd99'}
+                                                                className={`w-full h-full flex-row ${colorGenerator(report.handler)} items-center px-4`}
+                                                                onPress={() => toggleExpandDashboard(report.report_id)}
+                                                            >
+                                                                <>
+                                                                {/* Handler Type Icon */}
+                                                                <View className="w-[10%] h-[80%] justify-center">
+                                                                    <Image
+                                                                        tintColor={'#ffffff'}
+                                                                        source={report.handler === 'fire_station' ? icons.fireLogo : report.handler === 'police' ? icons.policeLogo : report.handler === 'disaster' ? icons.disasterLogo : icons.barangayLogo}
+                                                                        className="w-[50%] h-[50%]"
+                                                                        resizeMode='contain'
+                                                                    />
+                                                                </View>
+                                                                {/* Event Description Text */}
+                                                                <View className="w-[90%] h-[80%] justify-center">
+                                                                    <Text className="text-white font-pregular text-xs">
+                                                                        {`${report.report_status.charAt(0).toUpperCase() + report.report_status.slice(1)} Event: ${translate(report.report_type)}`}
+                                                                    </Text>
+                                                                </View>
+                                                                </>
+                                                            </TouchableHighlight>
+                                                            <View className="w-[20%] h-[80%] absolute right-2 z-30">
+                                                                <TouchableHighlight
+                                                                    underlayColor={'#86ebaa'}
+                                                                    className="w-full h-full items-center justify-center rounded-2xl"
+                                                                    onPress={handleOK}
+                                                                >
+                                                                    <Image
+                                                                        tintColor={'#ffffff'}
+                                                                        source={icons.nextArrowBtn}
+                                                                        className="w-[50%] h-[50%]"
+                                                                        resizeMode='contain'
+                                                                    />
+                                                                </TouchableHighlight>
+                                                            </View>
+                                                        </View>
+                                                    </View>
+                                                    {/* Options */}
+                                                    <View className="w-full h-10 mt-3">
+                                                    <   ScrollView className='w-full h-full' horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
+                                                            {/* Locate Button */}
+                                                            <TouchableHighlight
+                                                                className={`h-full bg-white rounded-3xl border-primary border-[1px] overflow-hidden px-6 ml-8`}
+                                                                underlayColor={'#bfffd6'} 
+                                                                onPress={() => handleLocate(report)}
+                                                            >
+                                                                <View className="h-full justify-center items-center flex-row overflow-hidden">
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#57b378'}
+                                                                            source={icons.mapFocus}
+                                                                            className="w-[80%] h-[80%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-black font-pregular text-sm">{'Locate'}</Text>
+                                                                    </View>
+                                                                </View>
+                                                            </TouchableHighlight>
+                                                            {/* Flag Button */}
+                                                            <TouchableHighlight
+                                                                className={`h-full bg-white rounded-3xl border-yellow-500 border-[1px] overflow-hidden px-6 mx-2`}
+                                                                underlayColor={'#fffd99'} 
+                                                                onPress={() => handleFlag(report.report_id)}
+                                                            >
+                                                                <View className="h-full justify-center items-center flex-row overflow-hidden">
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#eab308'}
+                                                                            source={icons.flag}
+                                                                            className="w-[80%] h-[80%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-black font-pregular text-sm">{'Flag False'}</Text>
+                                                                    </View>
+                                                                </View>
+                                                            </TouchableHighlight>
+                                                            {/* Request for Deletion Button */}
+                                                            <TouchableHighlight
+                                                                className={`h-full bg-white rounded-3xl border-red-500 border-[1px] overflow-hidden px-6 mr-8`}
+                                                                underlayColor={'#ffb0b0'}
+                                                                onPress={() => handleRequestDelete(report.report_id)}
+                                                            >
+                                                                <View className="h-full justify-center items-center flex-row overflow-hidden">
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#e62210'}
+                                                                            source={icons.deletePhoto}
+                                                                            className="w-[50%] h-[50%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-black font-pregular text-sm">{'Request for Deletion'}</Text>
+                                                                    </View>
+                                                                </View>
+                                                            </TouchableHighlight>
+                                                        </ScrollView>
                                                     </View>
                                                 </View>
-                                            </View>
-                                        )}
+                                            )
+                                        ))}
+                                        {/** Active Category
+                                         * Received Reports
+                                         */}
+                                        {dashboardSelection === 'active' && receivedReports?.map((report) => (
+                                            !expandedStates[report?.report_id] ? (
+                                                <View key={report.report_id} className="w-[96%] h-fit">
+                                                    <TouchableHighlight
+                                                        underlayColor={'#fffd99'}
+                                                        className={`w-full h-fit bg-white border-[1px] border-primary mt-4 rounded-3xl overflow-hidden`}
+                                                        onPress={() => toggleExpandDashboard(report.report_id)}
+                                                    >
+                                                        <>
+                                                            {/* Report Title */}
+                                                            <View className="w-[90%] h-fit mb-[1%] mt-[4%] px-4">
+                                                                <Text className={`text-primary-300 font-psemibold text-sm`}>
+                                                                    {`${getRelevantAddressParts(report.report_address)} - ${translate(report.report_type)}`}
+                                                                </Text>
+                                                            </View>
+                                                            {/* Address */}
+                                                            <View className="w-full h-fit mb-[4%] px-4 justify-center">
+                                                                <Text className="w-[68%] text-slate-500 font-pregular text-xs">{report.report_address}</Text>
+                                                                {/* Responders and User Count */}
+                                                                <View className="w-[25%] h-8 absolute right-4 flex-row justify-end">
+                                                                    <View className="w-[40%] h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#64748b'}
+                                                                            source={icons.aboutUs}
+                                                                            className="w-[50%] h-[50%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center">
+                                                                        <Text className={`text-slate-500 font-pregular text-xs text-right`}>
+                                                                            {countContributors(report)}
+                                                                        </Text>
+                                                                    </View>
+                                                                </View>
+                                                            </View>
+                                                        </>
+                                                    </TouchableHighlight>
+                                                </View>
+                                            ) : (
+                                                <View key={report.report_id} className="w-[96%] h-fit items-center justify-center">
+                                                    {/* Expanded View */}
+                                                    <View className={`w-full h-fit bg-white border-[1px] border-primary mt-4 rounded-3xl overflow-hidden`}>
+                                                        {/* Status Top */}
+                                                        <View className="w-full h-8 mt-[4%] mb-[2%] px-2">
+                                                            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="w-full h-full" contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
+                                                                {/* Time of Emergency */}
+                                                                <View className={`h-full ml-6 ${colorGenerator(report.report_status)} rounded-3xl justify-center items-center flex-row overflow-hidden px-2`}>
+                                                                    {/* Time Icons */}
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#ffffff'}
+                                                                            source={icons.time}
+                                                                            className="w-[60%] h-[60%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    {/* Time Text */}
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-white font-pregular text-xs">
+                                                                            {formatTime(report.incident_date || report.report_date)}
+                                                                        </Text>
+                                                                    </View>
+                                                                </View>
+                                                                {/* Date of Emergency */}
+                                                                <View className={`h-full mx-2 ${colorGenerator(report.report_status)} rounded-3xl justify-center items-center flex-row overflow-hidden px-2`}>
+                                                                    {/* Date Icons */}
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#ffffff'}
+                                                                            source={icons.date}
+                                                                            className="w-[60%] h-[60%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    {/* Time Text */}
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-white font-pregular text-xs">
+                                                                            {formatDate(report.incident_date || report.report_date)}
+                                                                        </Text>
+                                                                    </View>
+                                                                </View>
+                                                                {/* ID of Emergency */}
+                                                                <View className={`h-full mr-6 ${colorGenerator(report.report_status)} rounded-3xl justify-center items-center flex-row overflow-hidden px-2`}>
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#ffffff'}
+                                                                            source={icons.reportPoster}
+                                                                            className="w-[60%] h-[60%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-white font-pregular text-xs">{report.report_id}</Text>
+                                                                    </View>
+                                                                </View>
+                                                            </ScrollView>
+                                                        </View>
+                                                        {/* Report Name */}
+                                                        <View className="w-[90%] h-fit mb-[1%] px-4">
+                                                        <Text className={`text-primary-300 font-psemibold text-sm`}>
+                                                            {`${getRelevantAddressParts(report.report_address)} - ${translate(report.report_type)}`}
+                                                        </Text>
+                                                        </View>
+                                                        {/* Address */}
+                                                        <View className="w-full h-fit mb-[4%] px-4 justify-center">
+                                                            <Text className="w-[80%] text-slate-500 font-pregular text-xs">{report.report_address}</Text>
+                                                            {/* Responders and User Count */}
+                                                            <View className="w-[20%] h-8 absolute right-4 flex-row justify-end">
+                                                                <View className="w-[40%] h-full items-center justify-center">
+                                                                    <Image
+                                                                        tintColor={'#64748b'}
+                                                                        source={icons.aboutUs}
+                                                                        className="w-[70%] h-[70%]"
+                                                                        resizeMode='contain'
+                                                                    />
+                                                                </View>
+                                                                <View className="h-full justify-center">
+                                                                    <Text className={`text-slate-500 font-pregular text-sm text-right`}>{countContributors(report)}</Text>
+                                                                </View>
+                                                            </View>
+                                                        </View>
+                                                        {/* Expanded Stuff */}
+                                                        <View className="w-full h-14 justify-center">
+                                                            <TouchableHighlight
+                                                                underlayColor={'#fffd99'}
+                                                                className={`w-full h-full flex-row ${colorGenerator(report.handler)} items-center px-4`}
+                                                                onPress={() => toggleExpandDashboard(report.report_id)}
+                                                            >
+                                                                <>
+                                                                {/* Handler Type Icon */}
+                                                                <View className="w-[10%] h-[80%] justify-center">
+                                                                    <Image
+                                                                        tintColor={'#ffffff'}
+                                                                        source={report.handler === 'fire_station' ? icons.fireLogo : report.handler === 'police' ? icons.policeLogo : report.handler === 'disaster' ? icons.disasterLogo : icons.barangayLogo}
+                                                                        className="w-[50%] h-[50%]"
+                                                                        resizeMode='contain'
+                                                                    />
+                                                                </View>
+                                                                {/* Event Description Text */}
+                                                                <View className="w-[90%] h-[80%] justify-center">
+                                                                    <Text className="text-white font-pregular text-xs">
+                                                                        {`${report.report_status.charAt(0).toUpperCase() + report.report_status.slice(1)} Event: ${translate(report.report_type)}`}
+                                                                    </Text>
+                                                                </View>
+                                                                </>
+                                                            </TouchableHighlight>
+                                                            <View className="w-[20%] h-[80%] absolute right-2 z-30">
+                                                                <TouchableHighlight
+                                                                    underlayColor={'#86ebaa'}
+                                                                    className="w-full h-full items-center justify-center rounded-2xl"
+                                                                    onPress={handleOK}
+                                                                >
+                                                                    <Image
+                                                                        tintColor={'#ffffff'}
+                                                                        source={icons.nextArrowBtn}
+                                                                        className="w-[50%] h-[50%]"
+                                                                        resizeMode='contain'
+                                                                    />
+                                                                </TouchableHighlight>
+                                                            </View>
+                                                        </View>
+                                                    </View>
+                                                    {/* Options */}
+                                                    <View className="w-full h-10 mt-3">
+                                                        <ScrollView className='w-full h-full' horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
+                                                            {/* Locate Button */}
+                                                            <TouchableHighlight
+                                                                className={`h-full bg-white rounded-3xl border-primary border-[1px] overflow-hidden px-6 ml-8`}
+                                                                underlayColor={'#bfffd6'} 
+                                                                onPress={() => handleLocate(report)}
+                                                            >
+                                                                <View className="h-full justify-center items-center flex-row overflow-hidden">
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#57b378'}
+                                                                            source={icons.mapFocus}
+                                                                            className="w-[80%] h-[80%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-black font-pregular text-sm">{'Locate'}</Text>
+                                                                    </View>
+                                                                </View>
+                                                            </TouchableHighlight>
+                                                            {/* Flag Button */}
+                                                            <TouchableHighlight
+                                                                className={`h-full bg-white rounded-3xl border-yellow-500 border-[1px] overflow-hidden px-6 mx-2`}
+                                                                underlayColor={'#fffd99'} 
+                                                                onPress={() => handleFlag(report.report_id)}
+                                                            >
+                                                                <View className="h-full justify-center items-center flex-row overflow-hidden">
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#eab308'}
+                                                                            source={icons.flag}
+                                                                            className="w-[80%] h-[80%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-black font-pregular text-sm">{'Flag False'}</Text>
+                                                                    </View>
+                                                                </View>
+                                                            </TouchableHighlight>
+                                                            {/* Request for Deletion Button */}
+                                                            <TouchableHighlight
+                                                                className={`h-full bg-white rounded-3xl border-red-500 border-[1px] overflow-hidden px-6 mr-8`}
+                                                                underlayColor={'#ffb0b0'}
+                                                                onPress={() => handleRequestDelete(report.report_id)}
+                                                            >
+                                                                <View className="h-full justify-center items-center flex-row overflow-hidden">
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#e62210'}
+                                                                            source={icons.deletePhoto}
+                                                                            className="w-[50%] h-[50%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-black font-pregular text-sm">{'Request for Deletion'}</Text>
+                                                                    </View>
+                                                                </View>
+                                                            </TouchableHighlight>
+                                                        </ScrollView>
+                                                    </View>
+                                                </View>
+                                            )
+                                        ))}
+                                        {/* Responder Reports */}
+                                        {dashboardSelection === 'active' && sortedReports?.map((report) => (
+                                            !expandedStates[report?.report_id] ? (
+                                                <View key={report.report_id} className="w-[96%] h-fit">
+                                                    <TouchableHighlight
+                                                        underlayColor={'#fffd99'}
+                                                        className={`w-full h-fit bg-white border-[1px] border-primary mt-4 rounded-3xl overflow-hidden`}
+                                                        onPress={() => toggleExpandDashboard(report.report_id)}
+                                                    >
+                                                        <>
+                                                            {/* Report Title */}
+                                                            <View className="w-[90%] h-fit mb-[1%] mt-[4%] px-4">
+                                                                <Text className={`text-primary-300 font-psemibold text-sm`}>
+                                                                    {`${getRelevantAddressParts(report.report_address)} - ${translate(report.report_type)}`}
+                                                                </Text>
+                                                            </View>
+                                                            {/* Address */}
+                                                            <View className="w-full h-fit mb-[4%] px-4 justify-center">
+                                                                <Text className="w-[68%] text-slate-500 font-pregular text-xs">{report.report_address}</Text>
+                                                                {/* Responders and User Count */}
+                                                                <View className="w-[25%] h-8 absolute right-4 flex-row justify-end">
+                                                                    <View className="w-[40%] h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#64748b'}
+                                                                            source={icons.aboutUs}
+                                                                            className="w-[50%] h-[50%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center">
+                                                                        <Text className={`text-slate-500 font-pregular text-xs text-right`}>
+                                                                            {countContributors(report)}
+                                                                        </Text>
+                                                                    </View>
+                                                                </View>
+                                                            </View>
+                                                        </>
+                                                    </TouchableHighlight>
+                                                </View>
+                                            ) : (
+                                                <View key={report.report_id} className="w-[96%] h-fit items-center justify-center">
+                                                    {/* Expanded View */}
+                                                    <View className={`w-full h-fit bg-white border-[1px] border-primary mt-4 rounded-3xl overflow-hidden`}>
+                                                        {/* Status Top */}
+                                                        <View className="w-full h-8 mt-[4%] mb-[2%] px-2">
+                                                            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="w-full h-full" contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
+                                                                {/* Time of Emergency */}
+                                                                <View className={`h-full ml-6 ${colorGenerator(report.report_status)} rounded-3xl justify-center items-center flex-row overflow-hidden px-2`}>
+                                                                    {/* Time Icons */}
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#ffffff'}
+                                                                            source={icons.time}
+                                                                            className="w-[60%] h-[60%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    {/* Time Text */}
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-white font-pregular text-xs">
+                                                                            {formatTime(report.incident_date || report.report_date)}
+                                                                        </Text>
+                                                                    </View>
+                                                                </View>
+                                                                {/* Date of Emergency */}
+                                                                <View className={`h-full mx-2 ${colorGenerator(report.report_status)} rounded-3xl justify-center items-center flex-row overflow-hidden px-2`}>
+                                                                    {/* Date Icons */}
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#ffffff'}
+                                                                            source={icons.date}
+                                                                            className="w-[60%] h-[60%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    {/* Time Text */}
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-white font-pregular text-xs">
+                                                                            {formatDate(report.incident_date || report.report_date)}
+                                                                        </Text>
+                                                                    </View>
+                                                                </View>
+                                                                {/* ID of Emergency */}
+                                                                <View className={`h-full mr-6 ${colorGenerator(report.report_status)} rounded-3xl justify-center items-center flex-row overflow-hidden px-2`}>
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#ffffff'}
+                                                                            source={icons.reportPoster}
+                                                                            className="w-[60%] h-[60%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-white font-pregular text-xs">{report.report_id}</Text>
+                                                                    </View>
+                                                                </View>
+                                                            </ScrollView>
+                                                        </View>
+                                                        {/* Report Name */}
+                                                        <View className="w-[90%] h-fit mb-[1%] px-4">
+                                                        <Text className={`text-primary-300 font-psemibold text-sm`}>
+                                                            {`${getRelevantAddressParts(report.report_address)} - ${translate(report.report_type)}`}
+                                                        </Text>
+                                                        </View>
+                                                        {/* Address */}
+                                                        <View className="w-full h-fit mb-[4%] px-4 justify-center">
+                                                            <Text className="w-[80%] text-slate-500 font-pregular text-xs">{report.report_address}</Text>
+                                                            {/* Responders and User Count */}
+                                                            <View className="w-[20%] h-8 absolute right-4 flex-row justify-end">
+                                                                <View className="w-[40%] h-full items-center justify-center">
+                                                                    <Image
+                                                                        tintColor={'#64748b'}
+                                                                        source={icons.aboutUs}
+                                                                        className="w-[70%] h-[70%]"
+                                                                        resizeMode='contain'
+                                                                    />
+                                                                </View>
+                                                                <View className="h-full justify-center">
+                                                                    <Text className={`text-slate-500 font-pregular text-sm text-right`}>{countContributors(report)}</Text>
+                                                                </View>
+                                                            </View>
+                                                        </View>
+                                                        {/* Expanded Stuff */}
+                                                        <View className="w-full h-14 justify-center">
+                                                            <TouchableHighlight
+                                                                underlayColor={'#fffd99'}
+                                                                className={`w-full h-full flex-row ${colorGenerator(report.handler)} items-center px-4`}
+                                                                onPress={() => toggleExpandDashboard(report.report_id)}
+                                                            >
+                                                                <>
+                                                                {/* Handler Type Icon */}
+                                                                <View className="w-[10%] h-[80%] justify-center">
+                                                                    <Image
+                                                                        tintColor={'#ffffff'}
+                                                                        source={report.handler === 'fire_station' ? icons.fireLogo : report.handler === 'police' ? icons.policeLogo : report.handler === 'disaster' ? icons.disasterLogo : icons.barangayLogo}
+                                                                        className="w-[50%] h-[50%]"
+                                                                        resizeMode='contain'
+                                                                    />
+                                                                </View>
+                                                                {/* Event Description Text */}
+                                                                <View className="w-[90%] h-[80%] justify-center">
+                                                                    <Text className="text-white font-pregular text-xs">
+                                                                        {`${report.report_status.charAt(0).toUpperCase() + report.report_status.slice(1)} Event: ${translate(report.report_type)}`}
+                                                                    </Text>
+                                                                </View>
+                                                                </>
+                                                            </TouchableHighlight>
+                                                            <View className="w-[20%] h-[80%] absolute right-2 z-30">
+                                                                <TouchableHighlight
+                                                                    underlayColor={'#86ebaa'}
+                                                                    className="w-full h-full items-center justify-center rounded-2xl"
+                                                                    onPress={handleOK}
+                                                                >
+                                                                    <Image
+                                                                        tintColor={'#ffffff'}
+                                                                        source={icons.nextArrowBtn}
+                                                                        className="w-[50%] h-[50%]"
+                                                                        resizeMode='contain'
+                                                                    />
+                                                                </TouchableHighlight>
+                                                            </View>
+                                                        </View>
+                                                    </View>
+                                                    {/* Options */}
+                                                    <View className="w-full h-10 mt-3">
+                                                        <ScrollView className='w-full h-full' horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
+                                                            {/* Locate Button */}
+                                                            <TouchableHighlight
+                                                                className={`h-full bg-white rounded-3xl border-primary border-[1px] overflow-hidden px-6 ml-8`}
+                                                                underlayColor={'#bfffd6'} 
+                                                                onPress={() => handleLocate(report)}
+                                                            >
+                                                                <View className="h-full justify-center items-center flex-row overflow-hidden">
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#57b378'}
+                                                                            source={icons.mapFocus}
+                                                                            className="w-[80%] h-[80%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-black font-pregular text-sm">{'Locate'}</Text>
+                                                                    </View>
+                                                                </View>
+                                                            </TouchableHighlight>
+                                                            {/* Flag Button */}
+                                                            <TouchableHighlight
+                                                                className={`h-full bg-white rounded-3xl border-yellow-500 border-[1px] overflow-hidden px-6 mx-2`}
+                                                                underlayColor={'#fffd99'} 
+                                                                onPress={() => handleFlag(report.report_id)}
+                                                            >
+                                                                <View className="h-full justify-center items-center flex-row overflow-hidden">
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#eab308'}
+                                                                            source={icons.flag}
+                                                                            className="w-[80%] h-[80%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-black font-pregular text-sm">{'Flag False'}</Text>
+                                                                    </View>
+                                                                </View>
+                                                            </TouchableHighlight>
+                                                            {/* Request for Deletion Button */}
+                                                            <TouchableHighlight
+                                                                className={`h-full bg-white rounded-3xl border-red-500 border-[1px] overflow-hidden px-6 mr-8`}
+                                                                underlayColor={'#ffb0b0'}
+                                                                onPress={() => handleRequestDelete(report.report_id)}
+                                                            >
+                                                                <View className="h-full justify-center items-center flex-row overflow-hidden">
+                                                                    <View className="w-6 h-full items-center justify-center">
+                                                                        <Image
+                                                                            tintColor={'#e62210'}
+                                                                            source={icons.deletePhoto}
+                                                                            className="w-[50%] h-[50%]"
+                                                                            resizeMode='contain'
+                                                                        />
+                                                                    </View>
+                                                                    <View className="h-full justify-center pl-[4%]">
+                                                                        <Text className="text-black font-pregular text-sm">{'Request for Deletion'}</Text>
+                                                                    </View>
+                                                                </View>
+                                                            </TouchableHighlight>
+                                                        </ScrollView>
+                                                    </View>
+                                                </View>
+                                            )
+                                        ))}
+                                        <View className="w-full mb-6" />
                                     </ScrollView>
                                 </View>
                             </View>

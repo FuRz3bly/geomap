@@ -246,6 +246,10 @@ import time from "../assets/icons/time.png";
 import date from "../assets/icons/date.png";
 import navigator from "../assets/icons/navigation.png";
 
+import turnLeft from "../assets/icons/turn-left.png";
+import turnRight from "../assets/icons/turn-right.png";
+import turnStraight from "../assets/icons/turn-straight.png";
+
 export default {
   logo,
   profile,
@@ -463,5 +467,8 @@ export default {
   time,
   date,
   navigator,
-  reportDashboard
+  reportDashboard,
+  turnLeft,
+  turnRight,
+  turnStraight
 };

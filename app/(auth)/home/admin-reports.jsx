@@ -29,6 +29,7 @@ const AdminReportScreen = ({ data, changePage, backPage }) => {
     const scrollRef = useRef(null); // Scroll View Reference
     const [expandDashboard, setExpandDashboard] = useState(false); // Expand Dashboard
     const [expandedStates, setExpandedStates] = useState(data.map(() => false));
+    const [userAmenity, setUserAmenity] = useState(null); // User's Amenity Container
     const [printLoading, setPrintLoading] = useState(false); // Add Print Loading State
     const [selectedReport, setSelectedReport] = useState(null); // Selected Report Container
     const [htmlContent, setHtmlContent] = useState(''); // HTML Container

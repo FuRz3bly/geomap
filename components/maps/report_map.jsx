@@ -1,6 +1,6 @@
 import React, { forwardRef, useImperativeHandle, useEffect, useState, useContext, useCallback, useRef } from 'react';
 import { View, Text, Alert, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
-import MapView, { Marker, Callout, Heatmap } from 'react-native-maps';
+import MapView, { Marker, Callout, Heatmap, Polyline } from 'react-native-maps';
 import { getPreciseDistance, getDistance } from 'geolib';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications'
@@ -89,7 +89,10 @@ const ReportMap = forwardRef((props, ref) => {
   const [nearestAmenity, setNearestAmenity] = useState(null); // Nearest Amenity Container
   const [mapTheme, setMapTheme] = useState(default_theme);
   const [receiveReport, setReceiveReport] = useState(null); // Received Report Container
+  const [responderAmenity, setResponderAmenity] = useState([]); // Responder Amenity Container
+  const [responderLocation, setResponderLocation] = useState({ latitude: 0, longitude: 0 });
   const [responseReport, setResponseReport] = useState(null); // Response Report Container
+  const [responderRoute, setResponderRoute] = useState([]); // Current Route of Responder
 
   // Fetching Location Function
   const fetchLocation = useCallback(async () => {
@@ -181,6 +184,7 @@ const ReportMap = forwardRef((props, ref) => {
           if (relevantAmenity) {
             // Only display the Amenity with the id from the report with receive status
             setAmenities([relevantAmenity]);
+            setResponderAmenity([relevantAmenity]);
             if (mapRef.current) {
               const coordinates = [
                 {
@@ -301,11 +305,11 @@ const ReportMap = forwardRef((props, ref) => {
               );
               const estimatedArrivalTime = calculateArrivalTime(distance);
   
-              receiveMsg({ report: report.report_type, time: estimatedArrivalTime, respo: report.responder.full_name });
+              receiveMsg({ report: report.report_type, time: report.route_time.time || estimatedArrivalTime, respo: report.responder.full_name });
               containID(report.report_id);
               receiveVisible(true);
               if (!notifiedReports.has(report.report_id)) {
-                receiveNotification({ report: report.report_type, id: report.report_id, time: estimatedArrivalTime, respo: report.responder.full_name });
+                receiveNotification({ report: report.report_type, id: report.report_id, time: report.responder.route_time.time || estimatedArrivalTime, respo: report.responder.full_name });
                 setNotifiedReports(new Set(notifiedReports.add(report.report_id)));
               }
             }
@@ -328,11 +332,14 @@ const ReportMap = forwardRef((props, ref) => {
           setReceiveReport(receivedReport);
           setResponseReport(null);
           setSelectReport(receivedReport);
+          setResponderRoute(receivedReport.responder.route_coordinates);
+          setResponderLocation(receivedReport.responder.responder_location);
         } else if (respondedReport) {
           handleReport(respondedReport, false);
           setReceiveReport(null);
           setResponseReport(respondedReport);
           setSelectReport(respondedReport);
+          setResponderRoute([]);
         } else {
           setReceiveReport(null);
           setResponseReport(null);
@@ -862,17 +869,47 @@ const ReportMap = forwardRef((props, ref) => {
                 longitude: report.report_location.longitude,
               }}
               tracksViewChanges={tracksViewChanges}
+              image={
+                report.report_status === 'received' ? 
+                (selectReport?.report_id === report.report_id ? require('../../assets/icons/report-received-marker-select.png') : require('../../assets/icons/report-received-marker.png'))
+                  : report.report_status === 'responded' ? 
+                (selectReport?.report_id === report.report_id ? require('../../assets/icons/report-responded-marker-select.png') : require('../../assets/icons/report-responded-marker.png'))
+                  : report.report_status === 'resolved' ? 
+                (selectReport?.report_id === report.report_id ? require('../../assets/icons/report-resolved-marker-select.png') : require('../../assets/icons/report-resolved-marker.png'))
+                  : (selectReport?.report_id === report.report_id ? require('../../assets/icons/report-waiting-marker-select.png') : require('../../assets/icons/report-waiting-marker.png')) // default icon
+              }
               onPress={() => handleReportMarker(report)}
-            >
-              <View className='w-10 h-10 z-10 justify-center items-center'>
-                <Image
-                  source={icogenerator(report?.handler, 'respond')}
-                  className="w-full h-full"
-                  resizeMode="contain"
-                />
-              </View>
-            </Marker>
+            />
         ))}
+        {responderLocation && (
+          <Marker
+            coordinate={
+              responderLocation.latitude && responderLocation.longitude
+                ? {
+                  latitude: responderLocation.latitude,
+                  longitude:responderLocation.longitude
+                }
+                : { latitude: 0, longitude: 0 }
+            }
+            anchor={{ x: 0.5, y: 0.5 }}
+            image={
+              responderAmenity.type === 'police'
+                ? require('../../assets/icons/police-navigation.png')
+                : responderAmenity.type === 'disaster'
+                ? require('../../assets/icons/disaster-navigation.png')
+                : responderAmenity.type === 'barangay'
+                ? require('../../assets/icons/barangay-navigation.png')
+                : require('../../assets/icons/bfp-navigation.png') // default icon
+            }
+          />
+        )}
+        {responderRoute && (
+          <Polyline
+            coordinates={responderRoute}
+            strokeWidth={5}
+            strokeColor="#42e3a8"
+          />
+        )}
       </MapView>
     </View>
   )
