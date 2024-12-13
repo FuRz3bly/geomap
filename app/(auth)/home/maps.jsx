@@ -473,13 +473,18 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
   };
 
   const getDirectionIcon = (instructionText) => {
-    if (instructionText.toLowerCase().includes('left')) {
-        return icons.turnLeft;
-    } else if (instructionText.toLowerCase().includes('right')) {
-        return icons.turnRight;
-    } else {
-        return icons.turnStraight; // Default icon for straight movements
-    }
+    const lowerText = instructionText.toLowerCase();
+      if (lowerText.includes('left') || lowerText.includes('west')) {
+          return icons.turnLeft;
+      } else if (lowerText.includes('right') || lowerText.includes('east')) {
+          return icons.turnRight;
+      } else if (lowerText.includes('north')) {
+          return icons.turnStraight;
+      } else if (lowerText.includes('south')) {
+          return icons.turnBack;
+      } else {
+          return icons.turnStraight; // Default icon for straight movements
+      }
   };
 
   // Distance Color Generator Function

@@ -405,7 +405,7 @@ const RespondMap = forwardRef((
           { latitude: responderLocation?.latitude, longitude: responderLocation?.longitude },
           { latitude: selectReport?.report_location?.latitude, longitude: selectReport?.report_location?.longitude },
           'drive',
-          async (coordinates, formattedTime, totalDurationInMinutes, distanceInKilometers) => {
+          async (coordinates, formattedTime, totalDurationInMinutes, distanceInKilometers, instructions) => { // Added 'instructions' parameter
             // Responder Details To Be Recorded
             const responderDetails = {
               full_name: user.full_name,
@@ -427,10 +427,10 @@ const RespondMap = forwardRef((
                 time: formattedTime, // Formatted time
                 distance: distanceInKilometers, // Distance in kilometers
               },
+              route_instructions: instructions, // Save instructions to the database
             };
   
             setResponderRoute(coordinates); // Update state to draw route
-            console.log(responderInstructions);
             navigatingMapView(responderLocation?.latitude, responderLocation?.longitude);
   
             // Update report status and save responder details
@@ -442,6 +442,7 @@ const RespondMap = forwardRef((
             // Log for debugging
             console.log('Respo to Report ID:', selectReport.report_id);
             console.log('Route Time Data:', responderDetails.route_time);
+            console.log('Route Instructions:', instructions); // Debugging instructions
   
             // Display Response Modal
             responseMsg({
@@ -454,7 +455,7 @@ const RespondMap = forwardRef((
   
             reportID(selectReport.report_id);
             containID(selectReport.report_id);
-            responseVisible(true);
+            responseVisible(false);
   
             // Toggle Responding Process
             setStatus('eaglestoop'); // Set Status to Responding
@@ -756,26 +757,30 @@ const RespondMap = forwardRef((
   
       // Extract Instructions from coordinates
       const instructions = data.features[0].properties.legs?.flatMap(leg =>
-        leg.steps?.map(step => ({
-          text: step.instruction?.text || 'No instruction text available',
-          distance: step.distance || 0,
-          duration: step.duration || 0,
-          startLocation: step.start_location
-            ? {
-                latitude: step.start_location.lat,
-                longitude: step.start_location.lon,
-              }
-            : null,
-          endLocation: step.end_location
-            ? {
-                latitude: step.end_location.lat,
-                longitude: step.end_location.lon,
-              }
-            : null,
-        })) || []
+        leg.steps?.map(step => {
+          console.log('Step:', step); // Debugging
+          return {
+            text: step.instruction?.text || 'No instruction text available',
+            distance: step.distance || 0,
+            duration: step.duration || 0,
+            startLocation: step.start_location
+              ? {
+                  latitude: step.start_location.lat,
+                  longitude: step.start_location.lon,
+                }
+              : null,
+            endLocation: step.end_location
+              ? {
+                  latitude: step.end_location.lat,
+                  longitude: step.end_location.lon,
+                }
+              : null,
+          };
+        }) || []
       );
-
+  
       setResponderRoute(coordinates); // Update state to draw route
+      console.log(instructions);
       setResponderInstructions(instructions); // Update and Store Instructions
   
       // Update the selectedReportETA state
@@ -785,18 +790,14 @@ const RespondMap = forwardRef((
         distance: distanceInKilometers,
       });
   
-      /* console.log(`ETA Time: ${formattedTime}`); // Log the formatted ETA time
-      console.log(`ETA Duration: ${totalDurationInMinutes} minutes`); // Log the formatted duration
-      console.log(`Total Distance: ${distanceInKilometers} km`); // Log the formatted distance */
-  
-      // Invoke the callback with the coordinates, formatted time, duration, and distance
+      // Invoke the callback with the coordinates, formatted time, duration, distance, and instructions
       if (callback) {
-        callback(coordinates, formattedTime, totalDurationInMinutes, distanceInKilometers);
+        callback(coordinates, formattedTime, totalDurationInMinutes, distanceInKilometers, instructions);
       }
     } catch (error) {
       console.error('Error fetching Geoapify route:', error);
     }
-  };  
+  }; 
 
   // Recording Responder Location
   /* useEffect(() => {
@@ -1021,6 +1022,11 @@ const RespondMap = forwardRef((
   }, [responderRoute, progress, responderLocation, responderInstructions, currentInstruction]); */
 
   const findClosestPointIndex = (currentLocation, route) => {
+    if (!Array.isArray(route) || route.length === 0 || !currentLocation) {
+      console.error('Invalid route or current location.');
+      return -1;
+    }
+
     let closestIndex = 0;
     let minDistance = Infinity;
   
@@ -1039,48 +1045,122 @@ const RespondMap = forwardRef((
     return closestIndex;
   };
 
+  const hasStrayedFromRoute = (location, route, tolerance = 50) => {
+    const closestIndex = findClosestPointIndex(location, route);
+    if (closestIndex === -1) {
+        console.error('No closest point found. Strayed from the route.');
+        return true;
+    }
+
+    const closestPoint = route[closestIndex];
+    const distanceToClosestPoint = getDistance(
+        { latitude: location.latitude, longitude: location.longitude },
+        { latitude: closestPoint.latitude, longitude: closestPoint.longitude }
+    );
+
+    return distanceToClosestPoint > tolerance;
+  };
+
+  // Route Reduction and Instructions Display
   useEffect(() => {
     if (
-      status === 'eaglestoop' &&
-      responderLocation &&
-      Array.isArray(responderRoute) &&
-      responderRoute.length > 0
+        status === 'eaglestoop' &&
+        responderLocation &&
+        Array.isArray(responderRoute) &&
+        responderRoute.length > 0 &&
+        Array.isArray(responderInstructions) &&
+        responderInstructions.length > 0
     ) {
-      const closestIndex = findClosestPointIndex(responderLocation, responderRoute);
-  
-      // Only update if the truncated route is different
-      if (closestIndex > 0 && closestIndex < responderRoute.length) {
-        const newRoute = responderRoute.slice(closestIndex);
-        if (JSON.stringify(newRoute) !== JSON.stringify(responderRoute)) {
-          setResponderRoute(newRoute);
+        const closestIndex = findClosestPointIndex(responderLocation, responderRoute);
+
+        if (hasStrayedFromRoute(responderLocation, responderRoute)) {
+            reRoute();
+            return; // Exit early since re-routing is in progress
         }
-      }
+
+        if (closestIndex >= 0 && closestIndex < responderRoute.length) {
+            const newRoute = responderRoute.slice(closestIndex);
+            if (JSON.stringify(newRoute) !== JSON.stringify(responderRoute)) {
+                setResponderRoute(newRoute);
+            }
+
+            if (closestIndex < responderInstructions.length) {
+                const { text } = responderInstructions[closestIndex];
+
+                const nextInstructionIndex = responderInstructions.findIndex(
+                    (_, index) => index > closestIndex && index < responderRoute.length
+                );
+
+                const nextInstructionPoint = nextInstructionIndex !== -1
+                    ? responderRoute[nextInstructionIndex]
+                    : null;
+
+                const remainingDistance = nextInstructionPoint
+                    ? getDistance(
+                        { latitude: responderLocation.latitude, longitude: responderLocation.longitude },
+                        { latitude: nextInstructionPoint.latitude, longitude: nextInstructionPoint.longitude }
+                    )
+                    : 0;
+
+                const formattedDistance = Math.round(remainingDistance); // Cleaner formatting
+                const distanceText = `${formattedDistance} meter${formattedDistance === 1 ? '' : 's'}`;
+
+                setCurrentInstruction({
+                    text,
+                    turnDistance: distanceText,
+                });
+
+                respoInstruction({
+                    text,
+                    turnDistance: distanceText,
+                });
+            } else {
+                setCurrentInstruction({
+                    text: 'Wait',
+                    turnDistance: '0 meters',
+                });
+
+                respoInstruction({
+                    text: 'Wait',
+                    turnDistance: '0 meters',
+                });
+            }
+        }
     }
-  }, [status, responderLocation]);  
-  
+  }, [status, responderLocation, responderRoute, responderInstructions]);
+
   const reRoute = async () => {
-    if (!responderLocation || !respondReport) {
-      console.error('Responder location or report data is missing!');
-      return;
-    }
-  
-    console.log('Re-routing...');
-  
-    await drawRespoPath(
-      { latitude: responderLocation.latitude, longitude: responderLocation.longitude },
-      { latitude: respondReport.report_location.latitude, longitude: respondReport.report_location.longitude },
-      'drive',
-      (coordinates, formattedTime, eta, distance) => {
-        console.log('Re-route completed:', { coordinates, formattedTime, eta, distance });
-  
-        // Update Firestore with new route coordinates
-        const reportRef = doc(db, 'reports', respondReport.report_id);
-        updateDoc(reportRef, {
-          'responder.route_coordinates': coordinates,
-        });
+      if (!responderLocation || !respondReport) {
+          console.error('Responder location or report data is missing!');
+          return;
       }
-    );
+
+      console.log('Re-routing...');
+
+      await drawRespoPath(
+          { latitude: responderLocation.latitude, longitude: responderLocation.longitude },
+          { latitude: respondReport.report_location.latitude, longitude: respondReport.report_location.longitude },
+          'drive',
+          (coordinates, formattedTime, eta, distance) => {
+              console.log('Re-route completed:', { coordinates, formattedTime, eta, distance });
+
+              setResponderRoute(coordinates); // Update the route state with new coordinates
+
+              /* Uncomment if Firestore update is needed
+              const reportRef = doc(db, 'reports', respondReport.report_id);
+              updateDoc(reportRef, {
+                  'responder.route_coordinates': coordinates,
+              });
+              */
+          }
+      );
   };
+
+  useEffect(() => {
+    if (status === 'eaglestoop' && responderLocation?.latitude && responderLocation?.longitude) {
+      navigatingMapView(responderLocation.latitude, responderLocation.longitude);
+    }
+  }, [status, responderLocation]);
 
   useImperativeHandle(ref, () => ({
     handleResponse, handleArrival, reRoute,

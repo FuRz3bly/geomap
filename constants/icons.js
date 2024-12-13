@@ -249,6 +249,7 @@ import navigator from "../assets/icons/navigation.png";
 import turnLeft from "../assets/icons/turn-left.png";
 import turnRight from "../assets/icons/turn-right.png";
 import turnStraight from "../assets/icons/turn-straight.png";
+import turnBack from "../assets/icons/turn-back.png";
 
 export default {
   logo,
@@ -470,5 +471,6 @@ export default {
   reportDashboard,
   turnLeft,
   turnRight,
-  turnStraight
+  turnStraight,
+  turnBack
 };
