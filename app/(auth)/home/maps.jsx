@@ -20,7 +20,21 @@ import { Success, Failed, Receipt, Received, Arrived, Alerts, Arrival, Response,
 const filePath = `${FileSystem.cacheDirectory}temp/savedAmenity.json`;
 const queryPath = `${FileSystem.cacheDirectory}temp/previousQueries.json`;
 
-const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savings, loadings, fails, hideMenu, dashboardReport, dashboardReceive, setDashboardReceive }) => {
+const MapScreen = (
+  { changePage, 
+    backPage, 
+    selectedMap, 
+    changeMap, 
+    status, 
+    savings, 
+    loadings, 
+    fails, 
+    hideMenu, 
+    dashboardReport, 
+    dashboardReceive, 
+    setDashboardReceive,
+    isAssisting
+  }) => {
   // Global Variables
   const { report } = useLocalSearchParams();
   const { user, isResponder, isDuty } = useContext(UserContext);
@@ -176,8 +190,9 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
   const [reportStatus, setReportStatus] = useState(null); // Report Status Container
   const [dashboardLocateReport, setDashboardLocateReport] = useState(null); // Locate Dashboard Report
   const [selectedReportETA, setSelectedReportETA] = useState({ time: '0:00', eta: '0', distance: '0' }); // ETA to Report
-  const [currentInstruction, setCurrentInstruction] = useState({ text: 'Wait', turnDistance: '0 mi' }); // Responder Instructions
-  const [respoTimer, setRespoTimer] = useState('');
+  const [currentInstruction, setCurrentInstruction] = useState({ text: 'Wait', turnDistance: '0 m' }); // Responder Instructions
+  const [respoTimer, setRespoTimer] = useState(10);
+  const [isBatch, setBatch] = useState(false);
 
   // Allow the back button action when the component is mounted
   useEffect(() => {
@@ -1494,10 +1509,22 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
 
   const handleReceive = (report) => {
     //setLoading(true);
-    if (respondMapRef.current) {
-      respondMapRef.current.handleResponse()
+    if (isBatch) {
+      if (respondMapRef.current) {
+        respondMapRef.current.batchResponse()
+      }
+    } else {
+      if (respondMapRef.current) {
+        respondMapRef.current.handleResponse()
+      }
     }
     //setReceived(!received);
+  };
+
+  const handleAssist = (report) => {
+    if (respondMapRef.current) {
+      respondMapRef.current.handleAssist()
+    }
   };
 
   const handleRespoNavigate = (report, location = userLocation) => {
@@ -1636,6 +1663,7 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
             setDashboardReceiveReport={setDashboardReceive}
             respoInstruction={setCurrentInstruction}
             newTimer={setRespoTimer}
+            batchRespo={setBatch}
           />
         )}
       </View>
@@ -2459,50 +2487,96 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
             </TouchableHighlight>
           </View>
           {respoStatus === 'hawkwatch' ? (
-            <View className={`w-[35%] h-[18%] absolute ${reportInfoVisible || respoReportInfoVisible ? 'bottom-[38%] right-[4%]' : amenityInfoVisible ? 'bottom-[52%] right-[4%]' : searchInfoVisible ? 'bottom-[52%] -right-[90%]' : 'bottom-[3%] right-[4%]'}`}>
-              <TouchableHighlight
-                underlayColor={"#3b8a57"} 
-                className={`w-[70%] h-[70%] absolute bottom-0 right-0 ${selectedRespoReport && reportStatus === 'waiting' ? 'bg-primary' : 'bg-slate-400'} rounded-3xl shadow-md shadow-black z-20`} 
-                onLongPress={() => { 
-                    LayoutAnimation.configureNext({
-                        duration: 100,
-                        update: {
-                            type: LayoutAnimation.Types.linear,
-                            property: LayoutAnimation.Properties.scaleX
-                        },
-                    }); 
-                    toggleButtonInfo('receiveButton', true)
-                }}
-                disabled={!selectedRespoReport || reportStatus !== 'waiting'}
-                onPress={() => handleReceive(selectedRespoReport)}
-              >
-                <>
-                    <View className="w-full h-full items-center justify-center">
-                        {buttonInfo['receiveButton'] ? (
-                            <>
-                                <Image
-                                  tintColor={selectedRespoReport && reportStatus === 'waiting'  ? '#ffffff' : '#b8e3c7'}
-                                  source={icons.receive}
-                                  className="w-[40%] h-[40%]"
-                                  resizeMode='contain'
+            <>
+              {isAssisting ? (
+                <View className={`w-[35%] h-[18%] absolute ${reportInfoVisible || respoReportInfoVisible ? 'bottom-[38%] right-[4%]' : amenityInfoVisible ? 'bottom-[52%] right-[4%]' : searchInfoVisible ? 'bottom-[52%] -right-[90%]' : 'bottom-[3%] right-[4%]'}`}>
+                  <TouchableHighlight
+                    underlayColor={"#3b8a57"} 
+                    className={`w-[70%] h-[70%] absolute bottom-0 right-0 ${selectedRespoReport && reportStatus === 'waiting' ? 'bg-primary' : 'bg-slate-400'} rounded-3xl shadow-md shadow-black z-20`} 
+                    onLongPress={() => { 
+                        LayoutAnimation.configureNext({
+                            duration: 100,
+                            update: {
+                                type: LayoutAnimation.Types.linear,
+                                property: LayoutAnimation.Properties.scaleX
+                            },
+                        }); 
+                        toggleButtonInfo('assistButton', true)
+                    }}
+                    disabled={!selectedRespoReport || reportStatus !== 'waiting'}
+                    onPress={() => handleAssist(selectedRespoReport)}
+                  >
+                    <>
+                        <View className="w-full h-full items-center justify-center">
+                            {buttonInfo['assistButton'] ? (
+                                <>
+                                    <Image
+                                      tintColor={selectedRespoReport && reportStatus === 'waiting'  ? '#ffffff' : '#b8e3c7'}
+                                      source={icons.assist}
+                                      className="w-[40%] h-[40%]"
+                                      resizeMode='contain'
+                                    />
+                                    <Text className="text-xl text-white font-rmedium">{'ASSIST'}</Text>
+                                </>
+                            ) : (
+                                <Image 
+                                    tintColor={selectedRespoReport || reportStatus !== 'responded' || reportStatus !== 'received' ? '#ffffff' : '#b8e3c7'}
+                                    source={icons.assist}
+                                    className="w-[70%] h-[70%]"
+                                    resizeMode='contain'
                                 />
-                                <Text className="text-xl text-white font-rmedium">{'RECEIVE'}</Text>
-                            </>
-                        ) : (
-                            <Image 
-                                tintColor={selectedRespoReport || reportStatus !== 'responded' || reportStatus !== 'received' ? '#ffffff' : '#b8e3c7'}
-                                source={icons.receive}
-                                className="w-[70%] h-[70%]"
-                                resizeMode='contain'
-                            />
-                        )}
-                    </View>
-                </>
-              </TouchableHighlight>
-            </View>
+                            )}
+                        </View>
+                    </>
+                  </TouchableHighlight>
+                </View>
+              ) : (
+                <View className={`w-[35%] h-[18%] absolute ${reportInfoVisible || respoReportInfoVisible ? 'bottom-[38%] right-[4%]' : amenityInfoVisible ? 'bottom-[52%] right-[4%]' : searchInfoVisible ? 'bottom-[52%] -right-[90%]' : 'bottom-[3%] right-[4%]'}`}>
+                  <TouchableHighlight
+                    underlayColor={"#3b8a57"} 
+                    className={`w-[70%] h-[70%] absolute bottom-0 right-0 ${selectedRespoReport && reportStatus === 'waiting' ? 'bg-primary' : 'bg-slate-400'} rounded-3xl shadow-md shadow-black z-20`} 
+                    onLongPress={() => { 
+                        LayoutAnimation.configureNext({
+                            duration: 100,
+                            update: {
+                                type: LayoutAnimation.Types.linear,
+                                property: LayoutAnimation.Properties.scaleX
+                            },
+                        }); 
+                        toggleButtonInfo('receiveButton', true)
+                    }}
+                    disabled={!selectedRespoReport || reportStatus !== 'waiting'}
+                    onPress={() => handleReceive(selectedRespoReport)}
+                  >
+                    <>
+                        <View className="w-full h-full items-center justify-center">
+                            {buttonInfo['receiveButton'] ? (
+                                <>
+                                    <Image
+                                      tintColor={selectedRespoReport && reportStatus === 'waiting'  ? '#ffffff' : '#b8e3c7'}
+                                      source={icons.receive}
+                                      className="w-[40%] h-[40%]"
+                                      resizeMode='contain'
+                                    />
+                                    <Text className="text-xl text-white font-rmedium">{'RECEIVE'}</Text>
+                                </>
+                            ) : (
+                                <Image 
+                                    tintColor={selectedRespoReport || reportStatus !== 'responded' || reportStatus !== 'received' ? '#ffffff' : '#b8e3c7'}
+                                    source={icons.receive}
+                                    className="w-[70%] h-[70%]"
+                                    resizeMode='contain'
+                                />
+                            )}
+                        </View>
+                    </>
+                  </TouchableHighlight>
+                </View>
+              )}
+            </>
           ) : respoStatus === 'eaglestoop' ? (
             <>
-              <View className={`w-[35%] h-[18%] absolute ${reportInfoVisible || respoReportInfoVisible ? 'bottom-[38%] right-[4%]' : amenityInfoVisible ? 'bottom-[52%] right-[4%]' : searchInfoVisible ? 'bottom-[52%] -right-[90%]' : 'bottom-[3%] right-[4%]'}`}>
+              {/* <View className={`w-[35%] h-[18%] absolute ${reportInfoVisible || respoReportInfoVisible ? 'bottom-[38%] right-[4%]' : amenityInfoVisible ? 'bottom-[52%] right-[4%]' : searchInfoVisible ? 'bottom-[52%] -right-[90%]' : 'bottom-[3%] right-[4%]'}`}>
                 <TouchableHighlight
                   underlayColor={"#3b8a57"} 
                   className={"w-[70%] h-[70%] absolute bottom-0 right-0 bg-primary rounded-3xl shadow-md shadow-black z-20"} 
@@ -2541,7 +2615,7 @@ const MapScreen = ({ changePage, backPage, selectedMap, changeMap, status, savin
                       </View>
                   </>
                 </TouchableHighlight>
-              </View>
+              </View> */}
               <View className={`w-[70%] h-[12%] absolute top-[10%] left-[4%] bg-primary rounded-2xl flex-row py-2`}>
                 <View className="w-[25%] h-full items-center justify-center">
                   <Image 

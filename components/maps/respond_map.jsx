@@ -5,7 +5,7 @@ import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications'
 import { getDistance, getPreciseDistance } from 'geolib';
 import { router } from 'expo-router';
-import { collection, onSnapshot, doc, getDoc, updateDoc, GeoPoint } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc, updateDoc, arrayUnion, GeoPoint } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 
 import UserContext from '../UserContext';
@@ -62,12 +62,12 @@ const RespondMap = forwardRef((
     arrived, setArrived } = useContext(ToolsContext)
 
   // Location Variables
-  const [location, setLocation] = useState(null); // User Location Container
+  const [location, setLocation] = useState({ latitude: 0, longitude: 0}); // User Location Container
   const [errorMsg, setErrorMsg] = useState(null); // Error Message Container
   const [heading, setHeading] = useState(0); // Device Heading
   const [responderLocation, setResponderLocation] = useState({ latitude: 0, longitude: 0 });
   const [currentInstruction, setCurrentInstruction] = useState({ text: 'Wait', turnDistance: '0 mi' }); // Responder instructions
-  const [timeLeft, setTimeLeft] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(5);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
 
   // Notification Based Variables
@@ -91,9 +91,15 @@ const RespondMap = forwardRef((
   const [selectedRespondedReport, setSelectedRespondedReport] = useState(null); // Selected Responded Report Container
   const [respondReport, setRespondReport] = useState(null); // Responded Report Container
   const [destination, setDestination] = useState({ latitude: 0, longitude: 0 });
+
+  if (!location || !responderLocation) {
+    console.warn('Location or ResponderLocation is null');
+    return null; // Prevent rendering if data is invalid
+  }
   
   // Reference Variables
   const mapRef = useRef(null); // Map View Reference
+  const timerRef = useRef(timeLeft);
 
   // Calculate Estimated Time of Arrival (ETA)
   const calculateETA = (distance) => {
@@ -121,22 +127,29 @@ const RespondMap = forwardRef((
     let subscription;
   
     const startLocationUpdates = async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Permission to access location was denied');
-        return;
-      }
-      subscription = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.High, timeInterval: 1000, distanceInterval: 2 }, // Update every 1 seconds or 2 meters
-        (location) => {
-          setLocation(location.coords);
-          setResponderLocation({
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-          });
-          userLocation(location.coords);
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+            setErrorMsg('Permission to access location was denied');
+            return;
         }
-      );
+        subscription = await Location.watchPositionAsync(
+            { accuracy: Location.Accuracy.High, timeInterval: 1000, distanceInterval: 2 }, 
+            (location) => {
+                if (location?.coords) { // Ensure location and coords exist
+                    setLocation({
+                        latitude: location.coords.latitude,
+                        longitude: location.coords.longitude,
+                    });
+                    setResponderLocation({
+                        latitude: location.coords.latitude,
+                        longitude: location.coords.longitude,
+                    });
+                    userLocation(location.coords); // Call userLocation safely
+                } else {
+                    console.warn('Invalid location data:', location);
+                }
+            }
+        );
     };
   
     startLocationUpdates();
@@ -180,16 +193,25 @@ const RespondMap = forwardRef((
         }
       } else {
         timer = setTimeout(() => {
-          mapRef.current.animateCamera(
-            {
-              center: {
-                latitude: userAmenity.location.latitude,
-                longitude: userAmenity.location.longitude,
-              },
-              zoom: 15,
-            },
-            { duration: 1000 }
-          );
+            if (
+                userAmenity &&
+                userAmenity.location &&
+                typeof userAmenity.location.latitude === 'number' &&
+                typeof userAmenity.location.longitude === 'number'
+            ) {
+                mapRef.current.animateCamera(
+                    {
+                        center: {
+                            latitude: userAmenity.location.latitude,
+                            longitude: userAmenity.location.longitude,
+                        },
+                        zoom: 15,
+                    },
+                    { duration: 1000 }
+                );
+            } else {
+                console.warn('Invalid userAmenity location, skipping animateCamera');
+            }
         }, 2000);
       }
     }
@@ -300,10 +322,10 @@ const RespondMap = forwardRef((
         setStatus('eaglestoop'); // Set Status to Responding
         respoStatus('eaglestoop'); // Set Status Parent
         receivedReports.forEach(report => {
-          /* if (!notifiedReports.has(report.report_id)) {
+          if (!notifiedReports.has(report.report_id)) {
             sendNotification(report, 'received'); // Send Notification for Received Report
             setNotifiedReports(prev => new Set(prev).add(report.report_id)); // Add Notified Report for Avoiding Duplicate Notification
-          } */
+          }
         });
         setRespondReport(receivedReports[0]);
         handleReportMarker(receivedReports[0], receivedReports[0].report_status);
@@ -344,10 +366,10 @@ const RespondMap = forwardRef((
   
             // Check if userAmenity is one of the 3 nearest
             const nearbyReports = nearestAmenities.some(amenity => amenity.id === userAmenity.id);
-            /* if (nearbyReports && !notifiedReports.has(report.report_id) && isResponder) {
+            if (nearbyReports && !notifiedReports.has(report.report_id) && isResponder) {
               sendNotification(report); // Send Notification if New Report
               setNotifiedReports(prev => new Set(prev).add(report.report_id)); // Add Notified Report for Avoiding Duplicate Notification
-            } */
+            }
             return nearbyReports;
           }
           return false;
@@ -361,22 +383,38 @@ const RespondMap = forwardRef((
   // Report Marker Function
   const handleReportMarker = async (report, status) => {
     if (status !== 'eaglestoop') {
-      setSelectReport(report);
-      reportStatus(status);
-      reportID(reportID);
-      selectedReport(report);
-      reportVisible(true);
+        setSelectReport(report);
+        reportStatus(status);
+        reportID(report.id); // Fix incorrect variable `reportID` to `report.id`
+        selectedReport(report);
+        reportVisible(true);
 
-      if (status === 'received') {
-        return;
-      } else {
-        await drawPath(
-          { latitude: userAmenity.location.latitude, longitude: userAmenity.location.longitude },
-          { latitude: report.report_location.latitude, longitude: report.report_location.longitude }
-        );
-      }
+        if (status === 'received') {
+            return; // Skip drawing the path for "received" reports
+        } else {
+            // Check if userAmenity and its location are valid
+            if (
+                userAmenity &&
+                userAmenity.location &&
+                typeof userAmenity.location.latitude === 'number' &&
+                typeof userAmenity.location.longitude === 'number'
+            ) {
+                await drawPath(
+                    {
+                        latitude: userAmenity.location.latitude,
+                        longitude: userAmenity.location.longitude,
+                    },
+                    {
+                        latitude: report.report_location.latitude,
+                        longitude: report.report_location.longitude,
+                    }
+                );
+            } else {
+                console.log('Invalid userAmenity location, skipping drawPath');
+            }
+        }
     } else {
-      return
+        return; // Do nothing for "eaglestoop" status
     }
   };
 
@@ -469,6 +507,34 @@ const RespondMap = forwardRef((
           }
         );
       }
+    }
+  };
+
+  // Assist Button Function
+  const handleAssist = async () => {
+    console.log('Assiting');
+    if (selectReport && user && userAmenity) {
+      const reportRef = doc(db, 'reports', selectReport.report_id);
+
+      const responderDetails = {
+        full_name: user.full_name,
+        uid: user.uid,
+        amenity: {
+          id: userAmenity.id,
+          name: userAmenity.name,
+          description: userAmenity.description,
+          type: userAmenity.type,
+          address: userAmenity.address,
+          location: userAmenity.location,
+        },
+        responder_status: 'departed',
+        assist_time: new Date(),
+      };
+      
+      // Update report status and append responder details to the responders array
+      await updateDoc(reportRef, {
+        responders: arrayUnion(responderDetails), // Add details to the responders array
+      });
     }
   };
 
@@ -838,19 +904,70 @@ const RespondMap = forwardRef((
   };
 
   const updateRespoRoute = async () => {
+    //console.log(respondReport);
     try {
+      if (!respondReport || !respondReport.report_id) {
+        throw new Error("respondReport or respondReport.report_id is not defined");
+      }
+  
       const reportRef = doc(db, 'reports', respondReport.report_id);
+  
+      // Calculate remaining distance along responderRoute
+      let remainingDistance = 0;
+      for (let i = 0; i < responderRoute.length - 1; i++) {
+        const currentPoint = responderRoute[i];
+        const nextPoint = responderRoute[i + 1];
+        remainingDistance += getDistance(
+          { latitude: currentPoint.latitude, longitude: currentPoint.longitude },
+          { latitude: nextPoint.latitude, longitude: nextPoint.longitude }
+        );
+      }
+  
+      // Estimate ETA based on average speed (e.g., 5 m/s)
+      const averageSpeedMetersPerSecond = 5; // Adjust as needed
+      const etaInSeconds = remainingDistance / averageSpeedMetersPerSecond;
+  
+      // Format ETA into a readable time format (optional)
+      const etaMinutes = Math.ceil(etaInSeconds / 60);
   
       const updatedFields = {
         'responder.responder_location': new GeoPoint(responderLocation.latitude, responderLocation.longitude),
-        'responder.route_coordinates': responderRoute
+        'responder.route_coordinates': responderRoute,
+        'responder.route_time.eta': etaMinutes, // Add ETA in minutes
       };
   
       await updateDoc(reportRef, updatedFields);
-      console.log('Responder location and route coordinates updated:', updatedFields);
+      console.log('Responder location, route coordinates, and ETA updated:', updatedFields);
     } catch (error) {
-      console.error('Error updating responder location:', error);
+      console.error('Error updating responder location and ETA:', error);
     }
+  };
+
+  const reRoute = async () => {
+    if (!responderLocation || !respondReport) {
+        console.error('Responder location or report data is missing!');
+        return;
+    }
+
+    console.log('Re-routing...');
+
+    await drawRespoPath(
+        { latitude: responderLocation.latitude, longitude: responderLocation.longitude },
+        { latitude: respondReport.report_location.latitude, longitude: respondReport.report_location.longitude },
+        'drive',
+        (coordinates, formattedTime, eta, distance) => {
+            console.log('Re-route completed:', { coordinates, formattedTime, eta, distance });
+
+            setResponderRoute(coordinates); // Update the route state with new coordinates
+
+            /* Uncomment if Firestore update is needed
+            const reportRef = doc(db, 'reports', respondReport.report_id);
+            updateDoc(reportRef, {
+                'responder.route_coordinates': coordinates,
+            });
+            */
+        }
+    );
   };
 
   // Route Reduction and Instructions Display
@@ -935,33 +1052,6 @@ const RespondMap = forwardRef((
     }
   }, [status, responderLocation, responderRoute, responderInstructions]);
 
-  const reRoute = async () => {
-      if (!responderLocation || !respondReport) {
-          console.error('Responder location or report data is missing!');
-          return;
-      }
-
-      console.log('Re-routing...');
-
-      await drawRespoPath(
-          { latitude: responderLocation.latitude, longitude: responderLocation.longitude },
-          { latitude: respondReport.report_location.latitude, longitude: respondReport.report_location.longitude },
-          'drive',
-          (coordinates, formattedTime, eta, distance) => {
-              console.log('Re-route completed:', { coordinates, formattedTime, eta, distance });
-
-              setResponderRoute(coordinates); // Update the route state with new coordinates
-
-              /* Uncomment if Firestore update is needed
-              const reportRef = doc(db, 'reports', respondReport.report_id);
-              updateDoc(reportRef, {
-                  'responder.route_coordinates': coordinates,
-              });
-              */
-          }
-      );
-  };
-
   useEffect(() => {
     if (status === 'eaglestoop' && responderLocation?.latitude && responderLocation?.longitude) {
       navigatingMapView(responderLocation.latitude, responderLocation.longitude);
@@ -980,51 +1070,109 @@ const RespondMap = forwardRef((
 
   useEffect(() => {
     if (!isTimerRunning) {
-      setTimeLeft(60); // Reset timer if not running
-      newTimer(60); // Update the parent timer value immediately
+      setTimeLeft(10); // Reset timer if not running
       return;
     }
-  
-    let timerId; // Declare the timerId variable here for proper scoping
-  
-    const startTimer = () => {
-      timerId = setInterval(() => {
-        setTimeLeft((prevTime) => {
-          if (prevTime <= 1) {
-            console.log('Timer completed');
-            clearInterval(timerId); // Clear the interval when time reaches 0
-  
-            // Perform async operations before restarting the timer
-            updateRespoRoute().then(() => {
-              console.log('Timer resetting and starting again');
-              setTimeLeft(60); // Reset the timer in the child component
-              newTimer(60); // Update the timer in the parent component
-  
-              // Start a new timer immediately after completing the async operation
-              startTimer(); 
-            });
-  
-            return 60; // Reset the timer value
-          }
-  
-          // Pass the updated time to the parent to reflect the countdown
-          newTimer(prevTime - 1);
-          return prevTime - 1; // Decrement time in the child component
-        });
-      }, 1000);
-    };
-  
-    startTimer(); // Start the timer when isTimerRunning is true
-  
+
+    const timerId = setInterval(() => {
+      setTimeLeft((prevTime) => {
+        if (prevTime <= 1) {
+          console.log('Timer completed');
+          clearInterval(timerId); // Clear the interval when time reaches 0
+
+          // Reset the timer values both in the child and parent
+          setTimeLeft(10); // Reset the timer in the child component
+
+          // Perform any async operations here, like updating the responder route
+          updateRespoRoute().then(() => {
+            console.log('Timer resetting and starting again');
+            // Ensure the timer starts again
+            setTimeLeft(10);
+          });
+
+          return 10; // This is the return value that will reset the timeLeft
+        }
+
+        return prevTime - 1; // Decrement time in the child component
+      });
+    }, 1000);
+
     // Cleanup interval on component unmount or when timer stops
     return () => {
-      console.log('Clearing interval');
       clearInterval(timerId);
     };
-  }, [isTimerRunning]);
+  }, [isTimerRunning, updateRespoRoute]);
+  
+  // Additional effect to update the parent state asynchronously
+  useEffect(() => {
+    timerRef.current = timeLeft; // Sync the ref with the state
+    newTimer(timeLeft); // Update the parent timer value
+  }, [timeLeft, newTimer]);
+
+  // Function to group reports by proximity, type, and status
+  const groupReports = (reports, distanceThreshold = 50) => {
+    const groupedReports = [];
+    const usedReports = new Set();
+
+    reports.forEach(report => {
+      if (usedReports.has(report.report_id)) return;
+
+      const group = {
+        report_type: report.report_type,
+        report_status: report.report_status,
+        reports: [report],
+        latitude: report.report_location.latitude,
+        longitude: report.report_location.longitude,
+      };
+
+      usedReports.add(report.report_id);
+
+      reports.forEach(otherReport => {
+        if (
+          !usedReports.has(otherReport.report_id) &&
+          otherReport.report_type === report.report_type &&
+          otherReport.report_status === report.report_status
+        ) {
+          const distance = getDistance(
+            { latitude: report.report_location.latitude, longitude: report.report_location.longitude },
+            { latitude: otherReport.report_location.latitude, longitude: otherReport.report_location.longitude }
+          );
+
+          if (distance <= distanceThreshold) {
+            group.reports.push(otherReport);
+            usedReports.add(otherReport.report_id);
+
+            // Update group's centroid
+            group.latitude = (group.latitude * (group.reports.length - 1) + otherReport.report_location.latitude) / group.reports.length;
+            group.longitude = (group.longitude * (group.reports.length - 1) + otherReport.report_location.longitude) / group.reports.length;
+          }
+        }
+      });
+
+      groupedReports.push(group);
+    });
+
+    return groupedReports;
+  };
+
+  // Function for Group Reports Range
+  const getStatusColors = (status) => {
+    switch (status) {
+      case 'waiting':
+        return { strokeColor: 'rgba(252, 211, 77, 0.5)', fillColor: 'rgba(252, 211, 77, 0.2)' };
+      case 'received':
+        return { strokeColor: 'rgba(94, 234, 212, 0.5)', fillColor: 'rgba(94, 234, 212, 0.2)' };
+      case 'responded':
+        return { strokeColor: 'rgba(59, 130, 246, 0.5)', fillColor: 'rgba(59, 130, 246, 0.2)' };
+      case 'resolved':
+        return { strokeColor: 'rgba(74, 222, 128, 0.5)', fillColor: 'rgba(74, 222, 128, 0.2)' };
+      default:
+        return { strokeColor: 'rgba(0, 0, 0, 0.5)', fillColor: 'rgba(0, 0, 0, 0.2)' };
+    }
+  };
 
   useImperativeHandle(ref, () => ({
-    handleResponse, handleArrival, reRoute,
+    handleResponse, handleArrival, handleAssist, reRoute,
     handleFocus: () => {
       if (userAmenity && mapRef.current) {
           mapRef.current.animateCamera(
@@ -1102,7 +1250,7 @@ const RespondMap = forwardRef((
             }
           />
         )}
-        {reports.map(report => (
+        {reports?.map(report => (
           <Marker
             key={report.report_id}
             coordinate={{
@@ -1121,6 +1269,24 @@ const RespondMap = forwardRef((
             }}
           />
         ))}
+        {locateReport && (
+          <Marker
+            key={locateReport.report_id}
+            coordinate={{
+              latitude: locateReport.report_location.latitude,
+              longitude: locateReport.report_location.longitude,
+            }}
+            image={
+              locateReport.report_status === 'received' 
+                ? (selectReport?.report_id === locateReport.report_id ? require('../../assets/icons/report-received-marker-select.png') : require('../../assets/icons/report-received-marker.png'))
+                : locateReport.report_status === 'resolved'
+                ? (selectReport?.report_id === locateReport.report_id ? require('../../assets/icons/report-resolved-marker-select.png') : require('../../assets/icons/report-resolved-marker.png'))
+                : locateReport.report_status === 'responded'
+                ? (selectReport?.report_id === locateReport.report_id ? require('../../assets/icons/report-responded-marker-select.png') : require('../../assets/icons/report-responded-marker.png'))
+                : (selectReport?.report_id === locateReport.report_id ? require('../../assets/icons/report-waiting-marker-select.png') : require('../../assets/icons/report-waiting-marker.png')) // default icon
+            }
+          />
+        )}
         {status !== 'eaglestoop' && respondedReports.map(report => (
           <Marker
             key={report.report_id}

@@ -185,22 +185,33 @@ const ReportMap = forwardRef((props, ref) => {
             // Only display the Amenity with the id from the report with receive status
             setAmenities([relevantAmenity]);
             setResponderAmenity([relevantAmenity]);
+        
             if (mapRef.current) {
-              const coordinates = [
-                {
-                  latitude: receivedReport.report_location.latitude,
-                  longitude: receivedReport.report_location.longitude,
-                },
-                {
-                  latitude: relevantAmenity.location.latitude,
-                  longitude: relevantAmenity.location.longitude,
-                },
-              ];
-  
-              mapRef.current.fitToCoordinates(coordinates, {
-                edgePadding: { top: 200, right: 100, bottom: 200, left: 100 },
-                animated: true,
-              });
+              const routeCoordinates = receivedReport.responder.route_coordinates || []; // Ensure route_coordinates exist
+              
+              if (routeCoordinates.length > 0) {
+                // Zoom and fit the map to show the route
+                mapRef.current.fitToCoordinates(routeCoordinates, {
+                  edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+                  animated: true,
+                });
+              } else {
+                // Fallback: Fit the map to the start and end points
+                const coordinates = [
+                  {
+                    latitude: receivedReport.report_location.latitude,
+                    longitude: receivedReport.report_location.longitude,
+                  },
+                  {
+                    latitude: relevantAmenity.location.latitude,
+                    longitude: relevantAmenity.location.longitude,
+                  },
+                ];
+                mapRef.current.fitToCoordinates(coordinates, {
+                  edgePadding: { top: 200, right: 100, bottom: 200, left: 100 },
+                  animated: true,
+                });
+              }
             }
           }
         } else {
@@ -296,33 +307,34 @@ const ReportMap = forwardRef((props, ref) => {
         const respondedReport = filteredReports.find(report => report.report_status === 'responded');
   
         const handleReport = (report, isReceived) => {
-          setReports([report]);
-          if (isReceived) {
-            if (location) {
-              const distance = getPreciseDistance(
-                { latitude: report.responder.amenity.location.latitude, longitude: report.responder.amenity.location.longitude },
-                { latitude: report.report_location.latitude, longitude: report.report_location.longitude }
-              );
-              const estimatedArrivalTime = calculateArrivalTime(distance);
+          if (!notifiedReports.has(report.report_id)) {
+            setReports([report]);
   
-              receiveMsg({ report: report.report_type, time: report.responder.route_time.time || estimatedArrivalTime, respo: report.responder.full_name });
-              containID(report.report_id);
-              receiveVisible(true);
-              if (!notifiedReports.has(report.report_id)) {
+            if (isReceived) {
+              if (location) {
+                const distance = getPreciseDistance(
+                  { latitude: report.responder.amenity.location.latitude, longitude: report.responder.amenity.location.longitude },
+                  { latitude: report.report_location.latitude, longitude: report.report_location.longitude }
+                );
+                const estimatedArrivalTime = calculateArrivalTime(distance);
+  
+                receiveMsg({ report: report.report_type, time: report.responder.route_time.time || estimatedArrivalTime, respo: report.responder.full_name });
+                containID(report.report_id);
+                receiveVisible(true); // Show modal once
+  
                 receiveNotification({ report: report.report_type, id: report.report_id, time: report.responder.route_time.time || estimatedArrivalTime, respo: report.responder.full_name });
-                setNotifiedReports(new Set(notifiedReports.add(report.report_id)));
+                setNotifiedReports(new Set(notifiedReports.add(report.report_id))); // Mark report as notified
               }
-            }
-          } else {
-            setRespo(true);
-            setSelectReport(report);
-            arriveMsg({ report: report.report_type, respo: report.responder.full_name });
-            arriveVisible(true);
-            containID(report.report_id);
-            isResponded(true);
-            if (!notifiedReports.has(report.report_id)) {
+            } else {
+              setRespo(true);
+              setSelectReport(report);
+              arriveMsg({ report: report.report_type, respo: report.responder.full_name });
+              arriveVisible(true); // Show modal once
+              containID(report.report_id);
+              isResponded(true);
+  
               arriveNotification({ report: report.report_type, id: report.report_id, respo: report.responder.full_name });
-              setNotifiedReports(new Set(notifiedReports.add(report.report_id)));
+              setNotifiedReports(new Set(notifiedReports.add(report.report_id))); // Mark report as notified
             }
           }
         };
@@ -507,7 +519,7 @@ const ReportMap = forwardRef((props, ref) => {
         });
       } else { return }
     }
-  }, [location, findNearest, nearestAmenity, categoryAmenities, includedAmenity])
+  }, [location, findNearest, nearestAmenity, categoryAmenities, includedAmenity]);
 
   /* // Reset previous search results when search mode changes
   useEffect(() => {
@@ -584,7 +596,7 @@ const ReportMap = forwardRef((props, ref) => {
       }
     } else if (selectedResult && mapRef.current && reports && searchMode === 'reports') {
       const selectReport = reports.find(report => report.report_id === selectedResult)
-      if (selectReport) {
+      if (selectReport && !responderAmenity) {
         // Zoom in to the selected report location
         mapRef.current.animateToRegion({
           latitude: selectReport.report_location.latitude,
@@ -623,7 +635,7 @@ const ReportMap = forwardRef((props, ref) => {
           }
         } else {
           const selectedReport = reports.find(report => report.report_id === selectedResult)
-          if (selectedReport) {
+          if (selectedReport && !responderAmenity) {
             // Zoom in to the selected report location
             mapRef.current.animateToRegion({
               latitude: selectedReport.report_location.latitude,
@@ -804,6 +816,7 @@ const ReportMap = forwardRef((props, ref) => {
         }}
         customMapStyle={mapTheme}
         showsUserLocation={true}
+        showsBuildings={false}
         showsCompass={false}
         showsTraffic={traffics}
         showsMyLocationButton={false}

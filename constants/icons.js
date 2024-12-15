@@ -251,6 +251,8 @@ import turnRight from "../assets/icons/turn-right.png";
 import turnStraight from "../assets/icons/turn-straight.png";
 import turnBack from "../assets/icons/turn-back.png";
 
+import assist from "../assets/icons/assist.png";
+
 export default {
   logo,
   profile,
@@ -472,5 +474,6 @@ export default {
   turnLeft,
   turnRight,
   turnStraight,
-  turnBack
+  turnBack,
+  assist
 };
