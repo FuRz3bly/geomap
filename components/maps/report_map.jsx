@@ -58,7 +58,9 @@ const ReportMap = forwardRef((props, ref) => {
     amenityCount,
     findNearest,
     theme,
-    isResponded
+    isResponded,
+    isReceive,
+    receiver
   } = props; // Destructure props here
 
   // Global Variables
@@ -192,7 +194,7 @@ const ReportMap = forwardRef((props, ref) => {
               if (routeCoordinates.length > 0) {
                 // Zoom and fit the map to show the route
                 mapRef.current.fitToCoordinates(routeCoordinates, {
-                  edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+                  edgePadding: { top: 100, right: 100, bottom: 100, left: 100 },
                   animated: true,
                 });
               } else {
@@ -318,11 +320,11 @@ const ReportMap = forwardRef((props, ref) => {
                 );
                 const estimatedArrivalTime = calculateArrivalTime(distance);
   
-                receiveMsg({ report: report.report_type, time: report.responder.route_time.time || estimatedArrivalTime, respo: report.responder.full_name });
+                receiveMsg({ report: report.report_type, time: report.responder.route_time.eta || estimatedArrivalTime, respo: report.responder.full_name });
                 containID(report.report_id);
                 receiveVisible(true); // Show modal once
   
-                receiveNotification({ report: report.report_type, id: report.report_id, time: report.responder.route_time.time || estimatedArrivalTime, respo: report.responder.full_name });
+                receiveNotification({ report: report.report_type, id: report.report_id, time: report.responder.route_time.eta || estimatedArrivalTime, respo: report.responder.full_name });
                 setNotifiedReports(new Set(notifiedReports.add(report.report_id))); // Mark report as notified
               }
             } else {
@@ -344,6 +346,8 @@ const ReportMap = forwardRef((props, ref) => {
           setReceiveReport(receivedReport);
           setResponseReport(null);
           setSelectReport(receivedReport);
+          receiver(receivedReport);
+          isReceive(true);
           setResponderRoute(receivedReport.responder.route_coordinates);
           setResponderLocation(receivedReport.responder.responder_location);
         } else if (respondedReport) {
@@ -352,11 +356,14 @@ const ReportMap = forwardRef((props, ref) => {
           setResponseReport(respondedReport);
           setSelectReport(respondedReport);
           setResponderRoute([]);
+          isReceive(false);
         } else {
           setReceiveReport(null);
           setResponseReport(null);
           setReports(filteredReports);
           setSortReports(filteredReports);
+          receiver(null);
+          isReceive(false);
         }
       }
     });

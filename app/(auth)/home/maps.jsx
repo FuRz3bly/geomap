@@ -43,7 +43,7 @@ const MapScreen = (
   const searchRef = useRef(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0); // Keyboard Height Container
   const [submitLoading, setSubmitLoading] = useState(false); // Add Submit Loading state
-  const { dictionary, respo, setRespo, resolved, setResolved, isOnDuty, setIsOnDuty, received, setReceived, hasReport, sentReport, 
+  const { dictionary, respo, setRespo, resolved, setResolved, isOnDuty, setIsOnDuty, hasReport, sentReport, 
   isResponding, toggleResponse, isAmenity, toggleAmenity, arrived, setArrived } = useContext(ToolsContext); // Global Tools Variables
   const { width, height } = Dimensions.get('screen'); // Screen Width and Height
   const [parsedReport, setParsedReport] = useState(null); // Parsed Report From Router Container
@@ -127,6 +127,8 @@ const MapScreen = (
     { name: 'elevation', icon: icons.mapElevation }
   ];
   const [isResponded, setResponded] = useState(false); // Track if There Are Responded Reports
+  const [isReceived, setReceived] = useState(false); // Track if There Are Received Reports
+  const [receivedReport, setReceivedReport] = useState(null); // Container of Received Report
   // Search Variables
   const [searchQuery, setSearchQuery] = useState(''); // Search Query Container
   const [submitSearchQuery, setSubmitSearchQuery] = useState(''); // Submitted Search Query Container
@@ -1637,6 +1639,8 @@ const MapScreen = (
                 findNearest={isFindNearest}
                 theme={mapTheme}
                 isResponded={setResponded}
+                isReceive={setReceived}
+                receiver={setReceivedReport}
               />
             )}
           </>
@@ -1861,6 +1865,23 @@ const MapScreen = (
       {/* Main Buttons */}
       {!isOnDuty ? (
         <>
+          {isReceived && receivedReport && (
+            <View className={`w-[60%] h-[8%] absolute top-[10%] left-[4%] bg-primary rounded-2xl flex-row py-2 px-4`}>
+              <View className="w-[20%] h-full items-center justify-center">
+                <Image 
+                  tintColor="#ffffff"
+                  source={icons.onDuty}
+                  className="w-[70%] h-[70%]"
+                  resizeMode='contain'
+                />
+              </View>
+              <View className="w-[80%] h-full px-2 justify-center">
+                <Text className={`text-base text-white font-pregular`}>
+                  {`${receivedReport?.responder?.route_time?.eta} minute(s)`}
+                </Text>
+              </View>
+            </View>
+          )}
           {!searchInfoVisible && !isIntensity && !mapOptions ? (
             <View className={`w-[35%] h-[18%] absolute ${reportInfoVisible ? 'bottom-[38%] right-[4%]' : amenityInfoVisible ? 'bottom-[52%] right-[4%]' : searchInfoVisible ? 'bottom-[52%] -right-[90%]' : 'bottom-[3%] right-[4%]'}`}>
               {selectedAmenity && amenityInfoVisible && userLocation ? ( 
@@ -2576,7 +2597,7 @@ const MapScreen = (
             </>
           ) : respoStatus === 'eaglestoop' ? (
             <>
-              {/* <View className={`w-[35%] h-[18%] absolute ${reportInfoVisible || respoReportInfoVisible ? 'bottom-[38%] right-[4%]' : amenityInfoVisible ? 'bottom-[52%] right-[4%]' : searchInfoVisible ? 'bottom-[52%] -right-[90%]' : 'bottom-[3%] right-[4%]'}`}>
+              <View className={`w-[35%] h-[18%] absolute ${reportInfoVisible || respoReportInfoVisible ? 'bottom-[38%] right-[4%]' : amenityInfoVisible ? 'bottom-[52%] right-[4%]' : searchInfoVisible ? 'bottom-[52%] -right-[90%]' : 'bottom-[3%] right-[4%]'}`}>
                 <TouchableHighlight
                   underlayColor={"#3b8a57"} 
                   className={"w-[70%] h-[70%] absolute bottom-0 right-0 bg-primary rounded-3xl shadow-md shadow-black z-20"} 
@@ -2615,7 +2636,7 @@ const MapScreen = (
                       </View>
                   </>
                 </TouchableHighlight>
-              </View> */}
+              </View>
               <View className={`w-[70%] h-[12%] absolute top-[10%] left-[4%] bg-primary rounded-2xl flex-row py-2`}>
                 <View className="w-[25%] h-full items-center justify-center">
                   <Image 

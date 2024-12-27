@@ -791,8 +791,18 @@ const HomeScreen = () => {
 
     // Sort Reports Nearby
     const sortNearbyReports = (reports) => {
+        if (!reports || reports.length === 0) {
+            console.error("No reports available to sort.");
+            setSortedReports([]);
+            return;
+        }
+    
+        //console.log("Initial reports:", reports);
+    
         // Step 1: Filter reports with status 'waiting'
         const filteredReports = reports.filter(report => {
+            //console.log("Evaluating report:", report);
+    
             if (report.report_status !== 'waiting') return false;
     
             const userAmenityServices = userAmenity.services.reduce((acc, serviceObj) => {
@@ -801,46 +811,82 @@ const HomeScreen = () => {
                 return acc;
             }, []);
     
-            const reportServices = report.services || [];
-            const handlerMatches = report.handler === userAmenity.type; // Check handler match
+            //console.log("User services:", userAmenityServices);
     
-            // Include if at least one service matches or handler matches
+            const reportServices = report.services || [];
+            const handlerMatches = report.handler === userAmenity.type;
+    
             const hasMatchingService = reportServices.some(service => userAmenityServices.includes(service));
+    
+            /*console.log({
+                reportServices,
+                handlerMatches,
+                hasMatchingService,
+                passes: hasMatchingService || (reportServices.length === 0 && handlerMatches),
+            });*/
     
             return hasMatchingService || (reportServices.length === 0 && handlerMatches);
         });
     
+        //console.log("Filtered reports (status 'waiting'):", filteredReports);
+    
         // Step 2: Add reports with status 'received' and matching amenity ID
-        const receivedReports = reports.filter(report => 
+        const receivedReports = reports.filter(report =>
             report.report_status === 'received' && report.responder?.amenity?.id === userAmenity.id
         );
     
-        // Combine the two lists and remove duplicates
-        const combinedReports = [...filteredReports, ...receivedReports.filter(
-            receivedReport => !filteredReports.some(report => report.id === receivedReport.id)
-        )];
+        //console.log("Received reports (status 'received'):", receivedReports);
     
-        // Step 3: Sort by distance
-        const sortedByDistance = combinedReports
+        // Combine the two lists and remove duplicates
+        const combinedReports = [
+            ...filteredReports,
+            ...receivedReports
+        ];
+    
+        //console.log("Combined reports:", combinedReports);
+    
+        // Step 3: Validate and sort by distance
+        const validReports = combinedReports.filter(report => {
+            const isValidLocation =
+                report.report_location &&
+                report.report_location.latitude !== undefined &&
+                report.report_location.longitude !== undefined &&
+                userAmenity.location.latitude !== undefined &&
+                userAmenity.location.longitude !== undefined;
+    
+            if (!isValidLocation) {
+                console.error("Invalid location in report:", report);
+            }
+    
+            return isValidLocation;
+        });
+    
+        //console.log("Valid reports with proper locations:", validReports);
+    
+        const sortedByDistance = validReports
             .map(report => {
                 const distanceInMeters = getDistance(
                     { latitude: userAmenity.location.latitude, longitude: userAmenity.location.longitude },
                     { latitude: report.report_location.latitude, longitude: report.report_location.longitude }
                 );
     
+                //console.log("Distance to report:", distanceInMeters, "meters for report ID:", report.id);
+    
                 // Format distance as 'm' or 'km'
                 const formattedDistance =
-                    distanceInMeters < 1000
-                        ? `${distanceInMeters.toFixed(0)} m`
-                        : `${(distanceInMeters / 1000).toFixed(2)} km`;
-    
-                return { ...report, distance: formattedDistance };
+                distanceInMeters < 1000
+                    ? `${distanceInMeters.toFixed(0)} m`
+                    : `${(distanceInMeters / 1000).toFixed(2)} km`;
+
+            return { ...report, distance: formattedDistance };
             })
             .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance)) // Sort by numerical distance
             .slice(0, 10); // Take the top 10 closest reports
     
+        //console.log("Sorted reports by distance:", sortedByDistance);
+    
         setSortedReports(sortedByDistance);
-    };
+    };    
 
     // Check if user has pending and approved requests
     /* useEffect(() => {

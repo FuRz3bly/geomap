@@ -19,24 +19,24 @@ import { images, icons } from '../../../constants';
 const filePath = `${FileSystem.cacheDirectory}temp/appData.json`
 
 const report_data = {
-  structural_fire: { code: '01', defaultServices: ['firetruck'], handlers: ['fire_station'] },
-  vehicular_fire: { code: '02', defaultServices: ['firetruck'], handlers: ['fire_station'] },
-  fire_rescue: { code: '03', defaultServices: ['firetruck', 'ambulance'], handlers: ['fire_station'] },
-  explosion: { code: '04', defaultServices: ['firetruck'], handlers: ['fire_station'] },
-  wildfire: { code: '05', defaultServices: ['firetruck'], handlers: ['fire_station'] },
-  traffic_accident: { code: '11', defaultServices: ['ambulance'], handlers: ['police'] },
-  robbery: { code: '12', defaultServices: [], handlers: ['barangay', 'police'] },
-  assault: { code: '13', defaultServices: ['ambulance'], handlers: ['police'] },
-  active_shooting: { code: '14', defaultServices: ['ambulance'], handlers: ['police'] },
-  missing_person: { code: '15', defaultServices: [], handlers: ['police', 'disaster'] },
-  disaster_accident: { code: '21', defaultServices: ['ambulance'], handlers: ['disaster'] },
-  search_and_rescue: { code: '22', defaultServices: [], handlers: ['disaster', 'fire_station'] },
-  industrial_accident: { code: '23', defaultServices: ['ambulance'], handlers: ['disaster'] },
-  personal_safety: { code: '31', defaultServices: [], handlers: ['barangay', 'police'] },
-  theft: { code: '32', defaultServices: [], handlers: ['barangay', 'police'] },
-  public_disturbance: { code: '33', defaultServices: [], handlers: ['barangay', 'police'] },
-  domestic_violence: { code: '34', defaultServices: ['ambulance'], handlers: ['barangay', 'police'] },
-  noise: { code: '35', defaultServices: [], handlers: ['barangay', 'police'] }
+  structural_fire: { code: '01', defaultServices: ['firetruck'], handlers: ['fire_station'], firetruckDisabled: false },
+  vehicular_fire: { code: '02', defaultServices: ['firetruck'], handlers: ['fire_station'], firetruckDisabled: false },
+  fire_rescue: { code: '03', defaultServices: ['firetruck', 'ambulance'], handlers: ['fire_station'], firetruckDisabled: false },
+  explosion: { code: '04', defaultServices: ['firetruck'], handlers: ['fire_station'], firetruckDisabled: false },
+  wildfire: { code: '05', defaultServices: ['firetruck'], handlers: ['fire_station'], firetruckDisabled: false },
+  traffic_accident: { code: '11', defaultServices: ['ambulance'], handlers: ['police'], firetruckDisabled: false },
+  robbery: { code: '12', defaultServices: [], handlers: ['barangay', 'police'], firetruckDisabled: true },
+  assault: { code: '13', defaultServices: ['ambulance'], handlers: ['police'], firetruckDisabled: true },
+  active_shooting: { code: '14', defaultServices: ['ambulance'], handlers: ['police'], firetruckDisabled: true },
+  missing_person: { code: '15', defaultServices: [], handlers: ['police', 'disaster'], firetruckDisabled: true },
+  disaster_accident: { code: '21', defaultServices: ['ambulance'], handlers: ['disaster'], firetruckDisabled: false },
+  search_and_rescue: { code: '22', defaultServices: [], handlers: ['disaster', 'fire_station'], firetruckDisabled: false },
+  industrial_accident: { code: '23', defaultServices: ['ambulance'], handlers: ['disaster'], firetruckDisabled: true },
+  personal_safety: { code: '31', defaultServices: [], handlers: ['barangay', 'police'], firetruckDisabled: true },
+  theft: { code: '32', defaultServices: [], handlers: ['barangay', 'police'], firetruckDisabled: true },
+  public_disturbance: { code: '33', defaultServices: [], handlers: ['barangay', 'police'], firetruckDisabled: false },
+  domestic_violence: { code: '34', defaultServices: ['ambulance'], handlers: ['barangay', 'police'], firetruckDisabled: true },
+  noise: { code: '35', defaultServices: [], handlers: ['barangay', 'police'], firetruckDisabled: true },
 };
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -873,7 +873,7 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
   }
 
   const currentReport = report_data[currentType] || {};
-  const isFiretruckDisabled = currentReport.defaultServices?.includes('firetruck') || false;
+  const isFiretruckDisabled = currentReport.defaultServices?.includes('firetruck') || currentReport?.firetruckDisabled || false;
 
   const closeSModal = () => {setSuccessVisible(false)};
   const closeFModal = () => {setFailedVisible(false)};
@@ -1423,12 +1423,12 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
                         <TouchableHighlight underlayColor={"#d9ffe6"} className="rounded-xl" disabled={isFiretruckDisabled} onPress={() => handleServiceChange('firetruck')}>
                           <View className={`items-center justify-center`}>
                               <Image
-                                  tintColor={selectedServices.includes('firetruck') ? "#57b378" : "#9c9c9c"}
+                                  tintColor={selectedServices.includes('firetruck') ? (isFiretruckDisabled ? "#89cca1" : "#57b378") : (isFiretruckDisabled ? "#c9c9c9" : "#9c9c9c")}
                                   source={icons.fireTruck}
                                   className="w-28 h-11"
                                   resizeMode='contain'
                               />
-                              <Text className={`pt-2 font-rbase text-sm text-center ${selectedServices.includes('firetruck') ? "text-primary" : 'text-white-200'}`}>
+                              <Text className={`pt-2 font-rbase text-sm text-center ${selectedServices.includes('firetruck') ? (isFiretruckDisabled ? 'text-[#89cca1]' : "text-primary") : (isFiretruckDisabled ? 'text-[#c9c9c9]' : 'text-white-200')}`}>
                                   Fire Truck
                               </Text>
                           </View>
