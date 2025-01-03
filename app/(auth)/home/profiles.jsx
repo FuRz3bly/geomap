@@ -216,7 +216,7 @@ const ProfileScreen = ({ changePage, backPage }) => {
         const response = await fetch(asset.uri);
         const blob = await response.blob();
 
-        const storageRef = ref(storage, `users/${user.uid}/profile`);
+        const storageRef = ref(storage, `users/${user.user_id}/profile`);
         await uploadBytes(storageRef, blob);
         const url = await getDownloadURL(storageRef);
 

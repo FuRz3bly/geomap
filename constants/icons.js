@@ -253,6 +253,7 @@ import turnBack from "../assets/icons/turn-back.png";
 
 import assist from "../assets/icons/assist.png";
 import electric from "../assets/icons/electric.png";
+import noNetwork from "../assets/icons/no-network.png";
 
 export default {
   logo,
@@ -477,5 +478,6 @@ export default {
   turnStraight,
   turnBack,
   assist,
-  electric
+  electric,
+  noNetwork
 };

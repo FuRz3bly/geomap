@@ -7,6 +7,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import * as FileSystem from 'expo-file-system';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Success, Failed, Warning, Terms } from '../../../components/modals';
+import NetInfo from '@react-native-community/netinfo';
 
 import { collection, setDoc, doc, getDocs, getDoc, updateDoc, GeoPoint, Timestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -128,6 +129,9 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
   const [isLock, setLock] = useState(true); // Is Submit Button Locked?
   const [isDelete, setDelete] = useState(true); // Is Delete Button Locked?
   const [isLoaded, setIsLoaded] = useState(false); // Prevents auto-saving on load
+  // Network Components
+  const [noNetwork, setNoNetwork] = useState(false); // Storage if No Network
+  const [networkLoading, setNetworkLoading] = useState(false); // If Network Checking
 
   // Function to create a directory and write the file
   const saveData = async (currentData, previousData, filePath) => {
@@ -339,6 +343,24 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
         return icons.municipalHall;
     }
   };
+
+  // Detect If Internet is Slow
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      const isConnected = state.isConnected;
+      const isSlow = state.details?.downlink && state.details.downlink < 0.5; // 0.5 Mbps as a slow threshold
+
+      if (!isConnected || isSlow) {
+        setNoNetwork(true);
+      } else {
+        setNoNetwork(false);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   // Time Countdown
   useEffect(() => {
@@ -698,6 +720,18 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
       return;
     }
 
+    // Check network connectivity and speed
+    const netInfo = await NetInfo.fetch();
+    const isSlow = netInfo.details?.downlink && netInfo.details.downlink < 0.5; // 0.5 Mbps as slow threshold
+
+    if (!netInfo.isConnected || isSlow) {
+      setNoNetwork(true);
+      console.error("Network unavailable or too slow to proceed.");
+      return;
+    }
+
+    setNoNetwork(false); // Reset if network is fine
+
     /* if (!termsAccepted) {
       setTermsVisible(true); // Show terms modal if not accepted
       return;
@@ -728,11 +762,19 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
       });
   
       const uploadedPhotos = await Promise.all(photoUploadPromises);
+      const incidentDate = Timestamp.fromDate(
+        new Date(Math.min(...photos.map((photo) => new Date(photo.timestamp).getTime())))
+      );
+  
+      const reportLocation = new GeoPoint(
+        photos[0].location.latitude,
+        photos[0].location.longitude
+      );
   
       const newReport = {
         report_id: reportId,
         ...report_form,
-        report_date: Timestamp.fromDate(new Date()),
+        report_date: incidentDate,
         report_address: (selectedAddressOption === 'current' ? currentAddress : user.address),
         incident_date: (() => {
           const currentDate = new Date();
@@ -752,7 +794,7 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
           }
         })(),
         report_type: currentType,
-        report_location: new GeoPoint(report_form.report_location.latitude, report_form.report_location.longitude),
+        report_location: reportLocation,
         services: selectedServices,
         coms: selectedPreferComsOption,
         injured: isInjured,
@@ -870,7 +912,30 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
         </View>
       </TouchableHighlight>
     )
-  }
+  };
+
+  const reconNetwork = async () => {
+    try {
+      setNetworkLoading(true);
+  
+      const netInfo = await NetInfo.fetch();
+  
+      if (netInfo.isConnected && netInfo.isInternetReachable) {
+        setNoNetwork(false); // Network is available
+        console.log("Reconnected to the internet.");
+      } else {
+        setNoNetwork(true); // Still no network
+        console.warn("Still no network connection.");
+  
+        // Wait for 5 seconds before setting network loading to false
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+      }
+    } catch (error) {
+      console.error("Error checking network status:", error);
+    } finally {
+      setNetworkLoading(false); // Always clear the loading state
+    }
+  };  
 
   const currentReport = report_data[currentType] || {};
   const isFiretruckDisabled = currentReport.defaultServices?.includes('firetruck') || currentReport?.firetruckDisabled || false;
@@ -882,13 +947,41 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
 
   if (Aloading) {
     return (
+      <SafeAreaView className="w-full h-full items-center justify-center bg-primary">
+        <View className="items-center justify-center bg-white p-[5%] rounded-2xl">
+          <ActivityIndicator size="100" color="#57b378" />
+        </View>
+      </SafeAreaView>
+    )
+  };
+
+  if (noNetwork) {
+    return (
         <SafeAreaView className="w-full h-full items-center justify-center bg-primary">
-          <View className="items-center justify-center bg-white p-[5%] rounded-2xl">
-            <ActivityIndicator size="100" color="#57b378" />
+          <View className="w-[70%] h-[60%] items-center justify-center bg-white rounded-2xl">
+            <Image 
+              tintColor="#ff845c"
+              source={icons.noNetwork}
+              className="w-20 h-20"
+              resizeMode='contain'
+            />
+            {/* Warning Title */}
+            <Text className="text-warn text-2xl font-psemibold py-8" numberOfLines={1} ellipsizeMode='tail'>{'NO NETWORK'}</Text>
+            {/* Warning Description */}
+            <Text className="w-[80%] text-slate-500 text-base font-pregular text-center pb-8" numberOfLines={3} ellipsizeMode='tail'>
+              {'Please reconnect to continue reporting.'}
+            </Text>
+            {/* Buttons Available */}
+            <View className="w-[80%] items-center justify-center">
+              {/* Reconnect */}
+              <TouchableHighlight className="py-3 px-4 bg-warn-100 rounded-2xl" underlayColor={"#ffc484"} onPress={reconNetwork}>
+                {networkLoading ? (<ActivityIndicator size="large" color="#ffffff" />) : (<Text className="text-white text-base font-pregular text-center">{'Reconnect'}</Text>)}
+              </TouchableHighlight>
+            </View>
           </View>
         </SafeAreaView>
     )
-  }
+  };
 
   return (
     <SafeAreaView className="w-full h-[104%] items-center -top-[4%] bg-primary-100 overflow-hidden">
