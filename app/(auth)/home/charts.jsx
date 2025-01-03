@@ -3,7 +3,7 @@ import { View, Image, Text, BackHandler, Dimensions, ScrollView, TouchableHighli
 import { SafeAreaView } from 'react-native-safe-area-context';
 import UserContext from '../../../components/UserContext';
 import { translate } from '../../../components/ToolsContext';
-import { Warning, Menu, Response, Arrival, Pins } from '../../../components/modals';
+import { Warning, Menu, Response, Arrival, Pins, Exploring } from '../../../components/modals';
 
 import { images, icons } from '../../../constants';
 
@@ -17,6 +17,7 @@ const ChartScreen = () => {
   const handleModal = () => {
     setModalVisible(true);
   };
+
   const closeModal = () => {
     setModalVisible(false);
   };
@@ -48,19 +49,8 @@ const ChartScreen = () => {
 
   return (
     <SafeAreaView className="w-full h-full bg-primary-100 justify-center items-center">
-      <Pins visible={isModalVisible} onClose={closeModal} />
-      {/*
-        <Image 
-          tintColor="#57b378"
-          source={icons.success}
-          className="w-20 h-20"
-          resizeMode='contain'
-        />
-        <Text className="text-primary text-2xl font-psemibold py-8">Oh Yeah!</Text>
-        <Text className="text-slate-500 text-base font-pregular text-center pb-8" numberOfLines={2} ellipsizeMode='tail'>{'You have successfully registered\nand logged in'}</Text>
-        <TouchableHighlight className="py-3 px-4 bg-primary rounded-2xl" underlayColor={"#86ebaa"} onPress={handleOK}>
-          <Text className="text-white text-base font-pregular text-center">OK</Text>
-        </TouchableHighlight>*/}
+      <Exploring visible={isModalVisible} onClose={closeModal} />
+      {/* Modal Button */}
       <View className="w-20 h-8 bg-orange-400 mt-8">
         <TouchableHighlight underlayColor={"#ffffff"} className="w-full h-full items-center justify-center" onPress={handleModal}>
           <Text className="text-base font-pregular text-white">MODALS</Text>

@@ -232,7 +232,7 @@ const ProfileScreen = ({ changePage, backPage }) => {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
-            aspect: [4, 3], // Square aspect for ID card size
+            aspect: [856, 540], // Square aspect for ID card size
             quality: 1,
         });
     
@@ -249,7 +249,7 @@ const ProfileScreen = ({ changePage, backPage }) => {
             // Prepare image for upload (store URI or other data if needed for upload)
             setPhotoIDURI(pickedImageUri);
         }
-    };    
+    };
 
     const handleInputChange = (field, value) => {
         setUserForm((prevState) => ({
@@ -797,7 +797,7 @@ const ProfileScreen = ({ changePage, backPage }) => {
                                     {user.full_name.first_name} {user.full_name.last_name}
                                 </Text>
                                 <Text className="text-sm font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
-                                    {`${user.uid}`}
+                                    {`RID #${user.user_id}`}
                                 </Text>
                             </>
                         ) : (

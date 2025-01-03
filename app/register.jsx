@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Image, ScrollView, TouchableOpacity, TouchableHighlight, Alert, ActivityIndicator, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { collection, getDocs, setDoc, doc } from 'firebase/firestore';
+import { getStorage, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { getFirestore, collection, getDocs, setDoc, doc } from 'firebase/firestore';
 import { app, auth, db } from '../firebaseConfig';
 
 import { icons } from '../constants';
@@ -26,7 +28,8 @@ const Register = () => {
     email: '',
     username: '',
     password: '',
-    confirmPass: ''
+    confirmPass: '',
+    photoID: null
   });
 
   // Allow the back button action when the component is mounted
@@ -53,6 +56,8 @@ const Register = () => {
   const [failedForm, setFailedForm] = useState({ title: 'Registration Failed!', description: '' });
   const [successForm, setSuccessForm] = useState({ title: 'Registration Success!', description: '' });
   const [isTermsAccepted, setTermsAccepted] = useState(false);
+
+  const [photoIDURI, setPhotoIDURI] = useState(null);
 
   useEffect(() => {
     if (userForm.password && userForm.confirmPass) {
@@ -116,7 +121,9 @@ const Register = () => {
   };
 
   const registerUser = async () => {
-    const { email, password, username, firstName, middleName, lastName, address, phoneNumber, birthdate } = userForm;
+    const db = getFirestore();
+    const storage = getStorage();
+    const { email, password, username, firstName, middleName, lastName, address, phoneNumber, birthdate, photoID } = userForm;
     setLoading(true);
   
     // Format birthdate to YYYY-MM-DD
@@ -127,6 +134,21 @@ const Register = () => {
       const user = userCredential.user;
   
       const newUserId = await generateUserId();
+      // Upload photo_id if it exists and get the download URL
+      let photoURL = null;
+      if (photoIDURI) {
+          const photoRef = ref(storage, `users/${newUserId}/id`);
+          try {
+              const response = await fetch(photoIDURI);
+              if (!response.ok) throw new Error('Network response was not ok');
+              const blob = await response.blob();
+              await uploadBytes(photoRef, blob);
+              photoURL = await getDownloadURL(photoRef);
+          } catch (fetchError) {
+              console.error('Error fetching photo ID:', fetchError);
+              throw fetchError;
+          }
+      }
   
       await setDoc(doc(db, 'users', user.uid), {
         user_id: newUserId,
@@ -142,7 +164,7 @@ const Register = () => {
         phone_number: phoneNumber,
         birthdate: formattedBirthdate,
         email: email,
-        photo_id: null,
+        photo_id: photoURL,
         session_token: null,
         reports: 0
       });
@@ -158,7 +180,8 @@ const Register = () => {
         address: '',
         phoneNumber: '',
         birthdate: '',
-        confirmPass: ''
+        confirmPass: '',
+        photoID: null
       });
   
       router.push('/log-in');
@@ -205,6 +228,29 @@ const Register = () => {
       setTermsVisible(true);
     } else {
       await registerUser();
+    }
+  };
+
+  const handleIDPick = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [856, 540], // Square aspect for ID card size
+        quality: 1,
+    });
+
+    if (!result.canceled) {
+        const pickedImageUri = result.assets[0].uri;
+        const fileName = pickedImageUri.split('/').pop(); // Get file name from the URI
+
+        // Update userForm with file name and prepare for upload
+        setUserForm((prevState) => ({
+            ...prevState,
+            photoID: fileName,
+        }));
+
+        // Prepare image for upload (store URI or other data if needed for upload)
+        setPhotoIDURI(pickedImageUri);
     }
   };
 
@@ -326,6 +372,28 @@ const Register = () => {
                     value={userForm?.phoneNumber ? userForm.phoneNumber : ''}
                     onChangeText={(value) => handleInputChange('phoneNumber', value)}
                 />
+            </View>
+            {/* Photo ID */}
+            <Text className="font-pregular text-base text-black pb-[2%] pl-[4%]">{'ID Photo:'}</Text>
+            <View className={`w-full h-16 bg-white rounded-2xl border-2 ${userForm.photoID ? 'border-primary' : (registerReq.includes('photoID') ? 'border-rose-600/75' : 'border-primary')} mb-2`}>
+                <TouchableOpacity className="w-full h-full rounded-2xl justify-center items-center px-4 flex-row" onPress={handleIDPick}>
+                    <TextInput
+                        className="w-[90%] text-base font-pregular text-black"
+                        placeholder='ID Photo'
+                        placeholderTextColor='#94A3B8'
+                        value={userForm?.photoID ? userForm.photoID : ''}
+                        editable={false}
+                        onChangeText={(value) => handleInputChange('photoID', value.replace(/\s/g, ''))}
+                    />
+                    <View className="w-[10%] h-full items-end justify-center">
+                        <Image 
+                            tintColor={"#57b378"}
+                            source={icons.editing}
+                            className="w-[70%] h-[70%]"
+                            resizeMode='contain'
+                        />
+                    </View>
+                </TouchableOpacity>
             </View>
             {/* Username */}
             <Text className="font-pregular text-base text-black pb-[2%] pl-[4%]">Username:</Text>

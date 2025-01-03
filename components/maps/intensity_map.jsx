@@ -193,7 +193,7 @@ const IntensityMap = ({ mapStatus, loadingMsg, successMsg, failMsg, visibleCateg
             
                 const filteredReports = reportsList
                     .filter(filterCriteria[category] || (() => false))
-                    .filter(isReportFromCurrentMonth); // Apply the date filter
+                    //.filter(isReportFromCurrentMonth); // Apply the date filter
     
                 updatedData[category].reports = filteredReports || [];
                 updatedData[category].description = compressReports(filteredReports, updatedData[category].proximityDistance) || [];

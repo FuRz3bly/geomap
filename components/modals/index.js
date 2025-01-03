@@ -11,6 +11,9 @@ import Response from "./reports/response";
 import Arrival from "./reports/arrival";
 import Resolved from "./reports/resolved";
 import Pins from "./reports/pin";
+import Reporting from "./tutorial/reporting";
+import Exploring from "./tutorial/exploring";
+import Applying from "./tutorial/applying";
 
 export { 
     Failed, 
@@ -25,5 +28,8 @@ export {
     Response,
     Arrival,
     Resolved,
-    Pins
+    Pins,
+    Reporting,
+    Exploring,
+    Applying
 };

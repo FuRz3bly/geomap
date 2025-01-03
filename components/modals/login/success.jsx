@@ -35,7 +35,7 @@ const Success = ({ visible, onClose, title, description }) => {
                 <Text className="w-[80%] text-slate-500 text-base font-pregular text-center pb-8" numberOfLines={3} ellipsizeMode='tail'>{description}</Text>
                 {/* Buttons Available */}
                 <TouchableHighlight className="py-3 px-4 bg-primary rounded-2xl" underlayColor={"#86ebaa"} onPress={onClose}>
-                <Text className="text-white text-base font-pregular text-center">OK</Text>
+                    <Text className="text-white text-base font-pregular text-center">OK</Text>
                 </TouchableHighlight>
             </View>
             </SafeAreaView>
