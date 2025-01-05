@@ -1,6 +1,7 @@
 import React, { useEffect, useContext, useState } from 'react';
 import { View, Image, Text, BackHandler, Dimensions, ScrollView, TouchableOpacity, ActivityIndicator, TouchableHighlight, TextInput } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import Swiper from 'react-native-swiper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -809,193 +810,213 @@ const ProfileScreen = ({ changePage, backPage }) => {
                         )}
                     </View>
                     {!isResponder && (
-                    <View className="w-2/5 h-[6%] absolute top-[35%] right-[2%] z-20 items-end justify-center">
-                        {hasRequested ? (
-                            <View className="bg-slate-400 px-4 py-1 rounded-2xl flex-row items-center">
-                                <Image
-                                    tintColor={'#ffffff'}
-                                    source={icons.recentP}
-                                    className="w-4 h-4 mr-2"
-                                    resizeMode='contain'
-                                />
-                                <Text className="text-sm font-rbase text-white">{'Pending Request'}</Text>
-                            </View>
-                        ) : (
-                            <TouchableHighlight className="bg-primary px-4 py-1 rounded-2xl" underlayColor={'#3b8a57'} onPress={() => setApplyRespo(true)} disabled={hasRequested}>
-                                <Text className="text-sm font-rbase text-white">{'Apply as Responder'}</Text>
-                            </TouchableHighlight>
-                        )}
-                    </View>
+                        <View className="w-2/5 h-[6%] absolute top-[35%] right-[2%] z-20 items-end justify-center">
+                            {hasRequested ? (
+                                <View className="bg-slate-400 px-4 py-1 rounded-2xl flex-row items-center">
+                                    <Image
+                                        tintColor={'#ffffff'}
+                                        source={icons.recentP}
+                                        className="w-4 h-4 mr-2"
+                                        resizeMode='contain'
+                                    />
+                                    <Text className="text-sm font-rbase text-white">{'Pending Request'}</Text>
+                                </View>
+                            ) : (
+                                <TouchableHighlight className="bg-primary px-4 py-1 rounded-2xl" underlayColor={'#3b8a57'} onPress={() => setApplyRespo(true)} disabled={hasRequested}>
+                                    <Text className="text-sm font-rbase text-white">{'Apply as Responder'}</Text>
+                                </TouchableHighlight>
+                            )}
+                        </View>
                     )}
                     {/* Body Container */}
                     {user ? (
                         <>
-                            <View className={`w-full h-[62%] absolute top-[38%] inset-0 items-center`}>
-                                <View className="z-10 absolute -top-3 left-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
-                                    <Text className="text-base font-rmedium text-primary">USER DETAILS</Text>
+                            <Swiper
+                                dotColor='#e2e8f0'
+                                activeDotColor='#57b378'
+                                showsPagination={true}
+                                autoplay={false}
+                                autoplayTimeout={5}
+                                loop={false}
+                            >
+                                <View className={`w-full h-[62%] absolute top-[34%] inset-0 items-center`}>
+                                    {/* User Details */}
+                                    <View className="z-10 absolute -top-3 left-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
+                                        <Text className="text-base font-rmedium text-primary">
+                                            {'USER DETAILS'}
+                                        </Text>
+                                    </View>
+                                    <ScrollView showsVerticalScrollIndicator={true} className="w-full h-full" contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
+                                        {/* Username */}
+                                        <View className="w-full h-16 border-b-0.5 border-primary items-center flex-row">
+                                            <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
+                                                <Text className="text-base font-rbase text-primary">Username</Text>
+                                            </View>
+                                            <View className="w-[25%] h-full items-center justify-center">
+                                                <Image 
+                                                    tintColor="#57b378"
+                                                    source={icons.username}
+                                                    className="w-[35%] h-[35%]"
+                                                    resizeMode='contain'
+                                                />
+                                            </View>
+                                            <View className="w-[75%] h-full justify-center">
+                                                <Text className="text-lg font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
+                                                    {user.username}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        {/* Account Type */}
+                                        <View className="w-full h-16 -z-10 border-y-0.5 border-y-primary items-center flex-row">
+                                            <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
+                                                <Text className="text-base font-rbase text-primary">{'Account Type'}</Text>
+                                            </View>
+                                            <View className="w-[25%] h-full items-center justify-center">
+                                                <Image 
+                                                    tintColor="#57b378"
+                                                    source={icons.settings}
+                                                    className="w-[40%] h-[40%]"
+                                                    resizeMode='contain'
+                                                />
+                                            </View>
+                                            <View className="w-[75%] h-full justify-center">
+                                                <Text className="text-lg font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
+                                                    {user.type.charAt(0).toUpperCase() + user.type.slice(1)}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        {/* Birthday */}
+                                        <View className="w-full h-16 border-b-0.5 border-primary items-center flex-row">
+                                            <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
+                                                <Text className="text-base font-rbase text-primary">Birthdate</Text>
+                                            </View>
+                                            <View className="w-[25%] h-full items-center justify-center">
+                                                <Image 
+                                                    tintColor="#57b378"
+                                                    source={icons.birthdate}
+                                                    className="w-[30%] h-[30%]"
+                                                    resizeMode='contain'
+                                                />
+                                            </View>
+                                            <View className="w-[75%] h-full justify-center">
+                                                <Text className="text-lg font-pregular text-white-200" numberOfLines={1} ellipsizeMode='tail'>
+                                                    {formatDate(user.birthdate)}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        {/* Email */}
+                                        <View className="w-full h-16 border-b-0.5 border-primary items-center flex-row">
+                                            <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
+                                                <Text className="text-base font-rbase text-primary">Email</Text>
+                                            </View>
+                                            <View className="w-[25%] h-full items-center justify-center">
+                                                <Image 
+                                                    tintColor="#57b378"
+                                                    source={icons.email}
+                                                    className="w-[30%] h-[30%]"
+                                                    resizeMode='contain'
+                                                />
+                                            </View>
+                                            <View className="w-[75%] h-full justify-center">
+                                                <Text className="text-lg font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
+                                                    {user.email}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        {/* Phone Number */}
+                                        <View className="w-full h-16 border-b-0.5 border-primary items-center flex-row">
+                                            <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
+                                                <Text className="text-base font-rbase text-primary">Phone Number</Text>
+                                            </View>
+                                            <View className="w-[25%] h-full items-center justify-center">
+                                                <Image 
+                                                    tintColor="#57b378"
+                                                    source={icons.phone}
+                                                    className="w-[40%] h-[40%]"
+                                                    resizeMode='contain'
+                                                />
+                                            </View>
+                                            <View className="w-[75%] h-full justify-center">
+                                                <Text className="text-lg font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
+                                                    {formatNumber(user.phone_number)}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        {/* Address */}
+                                        <View className="w-full h-16 border-b-0.5 border-primary items-center flex-row">
+                                            <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
+                                                <Text className="text-base font-rbase text-primary">Address</Text>
+                                            </View>
+                                            <View className="w-[25%] h-full items-center justify-center">
+                                                <Image 
+                                                    tintColor="#57b378"
+                                                    source={icons.address}
+                                                    className="w-[40%] h-[40%]"
+                                                    resizeMode='contain'
+                                                />
+                                            </View>
+                                            <View className="w-[75%] h-full justify-center">
+                                                <Text className="text-lg font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
+                                                    {user.address}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        {isResponder ? (
+                                            <>
+                                                {/* Amenity Name */}
+                                                <View className="w-full h-16 border-b-0.5 border-primary items-center flex-row mb-10">
+                                                    <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
+                                                        <Text className="text-base font-rbase text-primary">{'Station'}</Text>
+                                                    </View>
+                                                    <View className="w-[25%] h-full items-center justify-center">
+                                                        <Image 
+                                                            tintColor="#57b378"
+                                                            source={icons.onDuty}
+                                                            className="w-[40%] h-[40%]"
+                                                            resizeMode='contain'
+                                                        />
+                                                    </View>
+                                                    <View className="w-[75%] h-full justify-center">
+                                                        <Text className="text-lg font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
+                                                            {amenity?.name}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                            </>
+                                        ) : (
+                                            <>
+                                                {/* Reports */}
+                                                <View className="w-full h-16 border-b-0.5 border-primary items-center flex-row mb-10">
+                                                    <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
+                                                        <Text className="text-base font-rbase text-primary">{'Total Reports'}</Text>
+                                                    </View>
+                                                    <View className="w-[25%] h-full items-center justify-center">
+                                                        <Image 
+                                                            tintColor="#57b378"
+                                                            source={icons.report}
+                                                            className="w-[40%] h-[40%]"
+                                                            resizeMode='contain'
+                                                        />
+                                                    </View>
+                                                    <View className="w-[75%] h-full justify-center">
+                                                        <Text className="text-lg font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
+                                                            {String(user.reports !== undefined ? user.reports : 0).padStart(3, '0')}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                            </>
+                                        )}
+                                    </ScrollView>
                                 </View>
-                                <ScrollView showsVerticalScrollIndicator={true} className="w-full h-full" contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
-                                    {/* Username */}
-                                    <View className="w-full h-16 border-b-0.5 border-primary items-center flex-row">
-                                        <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
-                                            <Text className="text-base font-rbase text-primary">Username</Text>
-                                        </View>
-                                        <View className="w-[25%] h-full items-center justify-center">
-                                            <Image 
-                                                tintColor="#57b378"
-                                                source={icons.username}
-                                                className="w-[35%] h-[35%]"
-                                                resizeMode='contain'
-                                            />
-                                        </View>
-                                        <View className="w-[75%] h-full justify-center">
-                                            <Text className="text-lg font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
-                                                {user.username}
-                                            </Text>
-                                        </View>
+                                <View className={`w-full h-[62%] absolute top-[34%] inset-0 items-center`}>
+                                    {/* Responder Statistics */}
+                                    <View className="z-10 absolute -top-3 left-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
+                                        <Text className="text-base font-rmedium text-primary">
+                                            {'RESPONDER STATISTICS'}
+                                        </Text>
                                     </View>
-                                    {/* Account Type */}
-                                    <View className="w-full h-16 -z-10 border-y-0.5 border-y-primary items-center flex-row">
-                                        <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
-                                            <Text className="text-base font-rbase text-primary">{'Account Type'}</Text>
-                                        </View>
-                                        <View className="w-[25%] h-full items-center justify-center">
-                                            <Image 
-                                                tintColor="#57b378"
-                                                source={icons.settings}
-                                                className="w-[40%] h-[40%]"
-                                                resizeMode='contain'
-                                            />
-                                        </View>
-                                        <View className="w-[75%] h-full justify-center">
-                                            <Text className="text-lg font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
-                                                {user.type.charAt(0).toUpperCase() + user.type.slice(1)}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                    {/* Birthday */}
-                                    <View className="w-full h-16 border-b-0.5 border-primary items-center flex-row">
-                                        <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
-                                            <Text className="text-base font-rbase text-primary">Birthdate</Text>
-                                        </View>
-                                        <View className="w-[25%] h-full items-center justify-center">
-                                            <Image 
-                                                tintColor="#57b378"
-                                                source={icons.birthdate}
-                                                className="w-[30%] h-[30%]"
-                                                resizeMode='contain'
-                                            />
-                                        </View>
-                                        <View className="w-[75%] h-full justify-center">
-                                            <Text className="text-lg font-pregular text-white-200" numberOfLines={1} ellipsizeMode='tail'>
-                                                {formatDate(user.birthdate)}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                    {/* Email */}
-                                    <View className="w-full h-16 border-b-0.5 border-primary items-center flex-row">
-                                        <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
-                                            <Text className="text-base font-rbase text-primary">Email</Text>
-                                        </View>
-                                        <View className="w-[25%] h-full items-center justify-center">
-                                            <Image 
-                                                tintColor="#57b378"
-                                                source={icons.email}
-                                                className="w-[30%] h-[30%]"
-                                                resizeMode='contain'
-                                            />
-                                        </View>
-                                        <View className="w-[75%] h-full justify-center">
-                                            <Text className="text-lg font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
-                                                {user.email}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                    {/* Phone Number */}
-                                    <View className="w-full h-16 border-b-0.5 border-primary items-center flex-row">
-                                        <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
-                                            <Text className="text-base font-rbase text-primary">Phone Number</Text>
-                                        </View>
-                                        <View className="w-[25%] h-full items-center justify-center">
-                                            <Image 
-                                                tintColor="#57b378"
-                                                source={icons.phone}
-                                                className="w-[40%] h-[40%]"
-                                                resizeMode='contain'
-                                            />
-                                        </View>
-                                        <View className="w-[75%] h-full justify-center">
-                                            <Text className="text-lg font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
-                                                {formatNumber(user.phone_number)}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                    {/* Address */}
-                                    <View className="w-full h-16 border-b-0.5 border-primary items-center flex-row">
-                                        <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
-                                            <Text className="text-base font-rbase text-primary">Address</Text>
-                                        </View>
-                                        <View className="w-[25%] h-full items-center justify-center">
-                                            <Image 
-                                                tintColor="#57b378"
-                                                source={icons.address}
-                                                className="w-[40%] h-[40%]"
-                                                resizeMode='contain'
-                                            />
-                                        </View>
-                                        <View className="w-[75%] h-full justify-center">
-                                            <Text className="text-lg font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
-                                                {user.address}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                    {isResponder ? (
-                                        <>
-                                            {/* Amenity Name */}
-                                            <View className="w-full h-16 border-b-0.5 border-primary items-center flex-row mb-10">
-                                                <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
-                                                    <Text className="text-base font-rbase text-primary">{'Station'}</Text>
-                                                </View>
-                                                <View className="w-[25%] h-full items-center justify-center">
-                                                    <Image 
-                                                        tintColor="#57b378"
-                                                        source={icons.onDuty}
-                                                        className="w-[40%] h-[40%]"
-                                                        resizeMode='contain'
-                                                    />
-                                                </View>
-                                                <View className="w-[75%] h-full justify-center">
-                                                    <Text className="text-lg font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
-                                                        {amenity?.name}
-                                                    </Text>
-                                                </View>
-                                            </View>
-                                        </>
-                                    ) : (
-                                        <>
-                                            {/* Reports */}
-                                            <View className="w-full h-16 border-b-0.5 border-primary items-center flex-row mb-10">
-                                                <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
-                                                    <Text className="text-base font-rbase text-primary">{'Total Reports'}</Text>
-                                                </View>
-                                                <View className="w-[25%] h-full items-center justify-center">
-                                                    <Image 
-                                                        tintColor="#57b378"
-                                                        source={icons.report}
-                                                        className="w-[40%] h-[40%]"
-                                                        resizeMode='contain'
-                                                    />
-                                                </View>
-                                                <View className="w-[75%] h-full justify-center">
-                                                    <Text className="text-lg font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
-                                                        {String(user.reports !== undefined ? user.reports : 0).padStart(3, '0')}
-                                                    </Text>
-                                                </View>
-                                            </View>
-                                        </>
-                                    )}
-                                </ScrollView>
-                            </View>
+                                </View>
+                            </Swiper>
                         </>
                     ) : (
                         <Text className="font-rbase text-white text-lg">No user is logged in.</Text>

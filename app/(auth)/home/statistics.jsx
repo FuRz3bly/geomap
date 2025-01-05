@@ -41,8 +41,10 @@ const StatisticsScreen = ({ changePage, backPage }) => {
   const [aveRespoTime, setAveRespoTime] = useState(0); // Average Response Time
 
   const [highArriveTime, setHighArriveTime] = useState(0); // Highest Arrival Time
+  const [highArriveDistance, setHighArriveDistance] = useState(0);
   const [highArriveID, setHighArriveID] = useState('') // Highest Arrival Time Report ID
   const [lowArriveTime, setLowArriveTime] = useState(0); // Lowest Arrival Time
+  const [lowArriveDistance, setLowArriveDistance] = useState(0);
   const [lowArriveID, setLowArriveID] = useState('') // Lowest Arrival Time Report ID
   const [aveArriveTime, setAveArriveTime] = useState(0); // Average Arrival Time
 
@@ -281,6 +283,9 @@ const StatisticsScreen = ({ changePage, backPage }) => {
     let lowestArriveTime = Infinity; // Initialize to Infinity
     let lowestArriveTimeId = null;
 
+    let lowestTimePerKm = Infinity;
+    let highestTimePerKm = 0;
+
     if (mode === 'respoTime') {
       // Loop through each report in the list
       reportsList.forEach((report) => {
@@ -336,9 +341,9 @@ const StatisticsScreen = ({ changePage, backPage }) => {
       setTotalReports(totalReportsCount); // Update Total Reports
     
       // Set state for highest and lowest response times
-      setHighRespoTime(highestResponseTimes);
+      setHighRespoTime(highestResponseTime);
       setHighRespoID(highestResponseTimeId);
-      setLowRespoTime(lowestResponseTimes);
+      setLowRespoTime(lowestResponseTime);
       setLowRespoID(lowestResponseTimeId);
       setAveRespoTime(averageResponseTime);
     } else {
@@ -350,60 +355,53 @@ const StatisticsScreen = ({ changePage, backPage }) => {
         const arrivalTime = report.responder?.arrival_time?.seconds
           ? new Date(report.responder.arrival_time.seconds * 1000)
           : null;
-    
-        // Ensure both dates are available and valid
-        if (receivedTime && arrivalTime && receivedTime >= startOfWeek && arrivalTime <= endOfWeek) {
-          // Calculate the arrival time (in minutes)
+      
+        const distance = parseFloat(report.responder?.route_time?.distance) || 0; // Distance in kilometers
+        
+        if (receivedTime && arrivalTime && receivedTime >= startOfWeek && arrivalTime <= endOfWeek && distance > 0) {
           const arriveTimeInMinutes = (arrivalTime - receivedTime) / (1000 * 60); // Convert ms to minutes
-    
-          // Get the day of the week (0 = Sunday, 1 = Monday, etc.)
-          const receivedDay = arrivalTime.getDay(); // Use responder.arrival_time to determine the day
-    
-          // Sum up the arrival times and count reports for each day
+          const timePerKm = arriveTimeInMinutes / distance;
+      
+          const receivedDay = arrivalTime.getDay(); 
           dayArriveSums[receivedDay] += arriveTimeInMinutes;
           totalArriveSum += arriveTimeInMinutes;
           dayReportCounts[receivedDay] += 1;
-          totalReportsCount += 1; // Track total reports for all days
-
-          // Check if this report has the highest arrival time
-          if (arriveTimeInMinutes > highestArriveTime) {
-            highestArriveTime = arriveTimeInMinutes;
-            highestArriveTimeId = report.report_id;
-          }
-
-          // Check if this report has the lowest arrival time (and avoid 0 arrival time)
-          if (arriveTimeInMinutes > 0 && arriveTimeInMinutes < lowestArriveTime) {
+          totalReportsCount += 1;
+      
+          // Find the highest and lowest weighted arrival times (considering distance)
+          if (timePerKm < lowestTimePerKm) {
+            lowestTimePerKm = timePerKm;
             lowestArriveTime = arriveTimeInMinutes;
             lowestArriveTimeId = report.report_id;
+            setLowArriveDistance(distance);
+          }
+        
+          if (timePerKm > highestTimePerKm) {
+            highestTimePerKm = timePerKm;
+            highestArriveTime = arriveTimeInMinutes;
+            highestArriveTimeId = report.report_id;
+            setHighArriveDistance(distance);
           }
         }
       });
-    
-      // Calculate the average arrive time for each day (Sunday to Saturday)
+      
+      // Calculating averages and setting states remains the same
       const averageArriveTimes = dayArriveSums.map((sum, index) =>
         dayReportCounts[index] > 0 ? sum / dayReportCounts[index] : 0
       );
-
+      
       const averageArriveTime = totalReportsCount > 0 ? totalArriveSum / totalReportsCount : 0;
-    
-      // Find the highest and lowest arrival times
-      const filteredTimes = averageArriveTimes.filter(time => time > 0);
-      const highestArriveTimes = filteredTimes.length > 0 ? Math.max(...filteredTimes) : 0;
-      const lowestArriveTimes = filteredTimes.length > 0 ? Math.min(...filteredTimes) : 0;
-    
-      // Update the dataPoints state with average arrival times for each day
-      setDataPoints(averageArriveTimes); // Each index represents Sunday to Saturday
-      setTotalReports(totalReportsCount); // Update Total Reports
-    
-      // Set state for highest and lowest arrive times
-      setHighArriveTime(highestArriveTimes);
+      
+      setDataPoints(averageArriveTimes);
+      setTotalReports(totalReportsCount);
+      setHighArriveTime(highestArriveTime);
       setHighArriveID(highestArriveTimeId);
-      setLowArriveTime(lowestArriveTimes);
+      setLowArriveTime(lowestArriveTime);
       setLowArriveID(lowestArriveTimeId);
-      setAveArriveTime(averageArriveTime);
+      setAveArriveTime(averageArriveTime);      
     }
   };
-  
+
   // Week Filter Function
   const handleWeekFilterChange = (filter) => {
     if (filter === 'this_week') {
@@ -448,164 +446,164 @@ const StatisticsScreen = ({ changePage, backPage }) => {
             {serviceMode === 'reports' ? (
               <>
                 <View className="w-full -top-[12%] items-center justify-center z-10">
-                {/* Reports Statistics */}
-                <View className="bg-white items-center shadow-lg shadow-black-200">
-                  <View className="py-[5%] flex-row gap-x-[95px] justify-center">
-                    <Text className="font-psemibold text-primary text-base left-[90%]">Report Statistics</Text>
-                    {/* Filters */}
-                    {showDate ? (
-                      <TouchableOpacity className="h-8 px-[18px]" onPress={() => toggleDate(!showDate)}>
-                        <View className="flex-row gap-x-2">
-                          <Text className="font-pregular text-sm text-primary-hidden">{"FILTERS"}</Text>
-                          <Image 
-                            tintColor='#94A3B8'
-                            source={icons.filter}
-                            className="w-5 h-5"
-                            resizeMode='contain'
-                          />
-                        </View>
-                      </TouchableOpacity>
+                  {/* Reports Statistics */}
+                  <View className="bg-white items-center shadow-lg shadow-black-200">
+                    <View className="py-[5%] flex-row gap-x-[95px] justify-center">
+                      <Text className="font-psemibold text-primary text-base left-[90%]">Report Statistics</Text>
+                      {/* Filters */}
+                      {showDate ? (
+                        <TouchableOpacity className="h-8 px-[18px]" onPress={() => toggleDate(!showDate)}>
+                          <View className="flex-row gap-x-2">
+                            <Text className="font-pregular text-sm text-primary-hidden">{"FILTERS"}</Text>
+                            <Image 
+                              tintColor='#94A3B8'
+                              source={icons.filter}
+                              className="w-5 h-5"
+                              resizeMode='contain'
+                            />
+                          </View>
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity className="h-8 px-2" onPress={() => toggleDate(!showDate)}>
+                          <View className="flex-row gap-x-2">
+                            <Text className="font-pregular text-sm text-primary-hidden">{filterWeekRange === 'last_last_week' ? "FURTHER" : translate(filterWeekRange).toUpperCase()}</Text>
+                            <Image 
+                              tintColor='#94A3B8'
+                              source={icons.filter2}
+                              className="w-5 h-5"
+                              resizeMode='contain'
+                            />
+                          </View>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    {dataPoints.length > 0 ? (
+                      <LineChart
+                        data={{
+                          labels: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'], // Days of the Week
+                          datasets: [
+                            {
+                              data: dataPoints, // Y-axis data: number of reports per day
+                              color: (opacity = 1) => `rgba(87, 179, 120, 1)`,
+                              strokeWidth: 2,
+                            },
+                          ],
+                        }}
+                        width={width - 40} // Adjust width to fit the screen
+                        height={220}
+                        yAxisSuffix="" // No suffix needed, but this can be modified if necessary
+                        yAxisInterval={1}
+                        chartConfig={{
+                          backgroundColor: '#ffffff',
+                          backgroundGradientFrom: '#ffffff',
+                          backgroundGradientTo: '#ffffff',
+                          decimalPlaces: 0, // Show whole numbers (no decimal points)
+                          color: (opacity = 1) => `rgba(87, 179, 120, ${opacity})`,
+                          labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                          style: { borderRadius: 10 },
+                          style: {
+                            borderRadius: 16,
+                          },
+                          propsForDots: {
+                            r: '5',
+                            strokeWidth: '2',
+                            stroke: '#57b378',
+                            fill: '#ffffff'
+                          },
+                        // Customize the y-axis scale
+                        propsForBackgroundLines: {
+                          strokeWidth: 1,
+                          stroke: '#e3e3e3',
+                        },
+                        // Define y-axis minimum and maximum values
+                        yAxisMin: 0,
+                        yAxisMax: 25,
+                      }}
+                        bezier
+                        style={{
+                          marginVertical: 8,
+                          borderRadius: 0,
+                        }}
+                      />
                     ) : (
-                      <TouchableOpacity className="h-8 px-2" onPress={() => toggleDate(!showDate)}>
-                        <View className="flex-row gap-x-2">
-                          <Text className="font-pregular text-sm text-primary-hidden">{filterWeekRange === 'last_last_week' ? "FURTHER" : translate(filterWeekRange).toUpperCase()}</Text>
-                          <Image 
-                            tintColor='#94A3B8'
-                            source={icons.filter2}
-                            className="w-5 h-5"
-                            resizeMode='contain'
-                          />
-                        </View>
-                      </TouchableOpacity>
+                      <Text className="font-psemibold text-primary text-xl text-center">No data available for chart.</Text>
+                    )}
+                    {showDate && (
+                      <View className="w-32 h-[146px] px-2 bg-primary/80 absolute right-8 top-12 z-10">
+                        <TouchableHighlight underlayColor={"#d9ffe6"} onPress={() => handleWeekFilterChange("this_week")}>
+                          <View className="flex-row gap-x-2 py-2">
+                            <Image 
+                              tintColor='#ffffff'
+                              source={filterWeekRange === "this_week" ? icons.verified : icons.filter}
+                              className="w-5 h-5"
+                              resizeMode='contain'
+                            />
+                            <Text className="font-pregular text-sm text-white">{"THIS WEEK"}</Text>
+                          </View>
+                        </TouchableHighlight>
+                        <View className="w-full h-[1px] bg-white"/>
+                        <TouchableHighlight underlayColor={"#d9ffe6"} onPress={() => handleWeekFilterChange("last_week")}>
+                          <View className="flex-row gap-x-2 py-2">
+                            <Image 
+                              tintColor='#ffffff'
+                              source={filterWeekRange === "last_week" ? icons.verified : icons.filter}
+                              className="w-5 h-5"
+                              resizeMode='contain'
+                            />
+                            <Text className="font-pregular text-sm text-white">{"LAST WEEK"}</Text>
+                          </View>
+                        </TouchableHighlight>
+                        <View className="w-full h-[1px] bg-white"/>
+                        <TouchableHighlight underlayColor={"#d9ffe6"} onPress={() => handleWeekFilterChange("last_last_week")}>
+                          <View className="flex-row gap-x-2 py-2">
+                            <Image 
+                              tintColor='#ffffff'
+                              source={filterWeekRange === "last_last_week" ? icons.verified : icons.filter}
+                              className="w-5 h-5"
+                              resizeMode='contain'
+                            />
+                            <Text className="font-pregular text-sm text-white">{"FURTHER"}</Text>
+                          </View>
+                        </TouchableHighlight>
+                        <View className="w-full h-[1px] bg-white"/>
+                        <TouchableHighlight underlayColor={"#d9ffe6"} onPress={() => toggleCalendar(true)}>
+                          <View className="flex-row gap-x-2 py-2">
+                            <Image 
+                              tintColor='#ffffff'
+                              source={icons.calendar}
+                              className="w-5 h-5"
+                              resizeMode='contain'
+                            />
+                            <Text className="font-pregular text-sm text-white">{"CALENDAR"}</Text>
+                          </View>
+                        </TouchableHighlight>
+                      </View>
+                    )}
+                    {showCalendar && (
+                      <DateTimePicker
+                        value={selectedWeek}
+                        mode="date"
+                        display="calendar"
+                        onChange={(event, date) => {
+                          handleWeekFilterChange("calendar");
+                          toggleCalendar(false);
+                          if (date) {
+                            const pickedDate = new Date(date);
+                          
+                            // Calculate the start of the week (Sunday)
+                            const currentDay = pickedDate.getDay();
+                            const startOfWeek = new Date(pickedDate);
+                            
+                            startOfWeek.setDate(pickedDate.getDate() - currentDay);
+                            startOfWeek.setHours(0, 0, 0, 0);
+                          
+                            // Update the selected week to start from Sunday
+                            setSelectedWeek(startOfWeek); // This is the Sunday of the selected week
+                          }
+                        }}
+                      />
                     )}
                   </View>
-                  {dataPoints.length > 0 ? (
-                    <LineChart
-                      data={{
-                        labels: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'], // Days of the Week
-                        datasets: [
-                          {
-                            data: dataPoints, // Y-axis data: number of reports per day
-                            color: (opacity = 1) => `rgba(87, 179, 120, 1)`,
-                            strokeWidth: 2,
-                          },
-                        ],
-                      }}
-                      width={width - 40} // Adjust width to fit the screen
-                      height={220}
-                      yAxisSuffix="" // No suffix needed, but this can be modified if necessary
-                      yAxisInterval={1}
-                      chartConfig={{
-                        backgroundColor: '#ffffff',
-                        backgroundGradientFrom: '#ffffff',
-                        backgroundGradientTo: '#ffffff',
-                        decimalPlaces: 0, // Show whole numbers (no decimal points)
-                        color: (opacity = 1) => `rgba(87, 179, 120, ${opacity})`,
-                        labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                        style: { borderRadius: 10 },
-                        style: {
-                          borderRadius: 16,
-                        },
-                        propsForDots: {
-                          r: '5',
-                          strokeWidth: '2',
-                          stroke: '#57b378',
-                          fill: '#ffffff'
-                        },
-                      // Customize the y-axis scale
-                      propsForBackgroundLines: {
-                        strokeWidth: 1,
-                        stroke: '#e3e3e3',
-                      },
-                      // Define y-axis minimum and maximum values
-                      yAxisMin: 0,
-                      yAxisMax: 25,
-                    }}
-                      bezier
-                      style={{
-                        marginVertical: 8,
-                        borderRadius: 0,
-                      }}
-                    />
-                  ) : (
-                    <Text className="font-psemibold text-primary text-xl text-center">No data available for chart.</Text>
-                  )}
-                  {showDate && (
-                    <View className="w-32 h-[146px] px-2 bg-primary/80 absolute right-8 top-12 z-10">
-                      <TouchableHighlight underlayColor={"#d9ffe6"} onPress={() => handleWeekFilterChange("this_week")}>
-                        <View className="flex-row gap-x-2 py-2">
-                          <Image 
-                            tintColor='#ffffff'
-                            source={filterWeekRange === "this_week" ? icons.verified : icons.filter}
-                            className="w-5 h-5"
-                            resizeMode='contain'
-                          />
-                          <Text className="font-pregular text-sm text-white">{"THIS WEEK"}</Text>
-                        </View>
-                      </TouchableHighlight>
-                      <View className="w-full h-[1px] bg-white"/>
-                      <TouchableHighlight underlayColor={"#d9ffe6"} onPress={() => handleWeekFilterChange("last_week")}>
-                        <View className="flex-row gap-x-2 py-2">
-                          <Image 
-                            tintColor='#ffffff'
-                            source={filterWeekRange === "last_week" ? icons.verified : icons.filter}
-                            className="w-5 h-5"
-                            resizeMode='contain'
-                          />
-                          <Text className="font-pregular text-sm text-white">{"LAST WEEK"}</Text>
-                        </View>
-                      </TouchableHighlight>
-                      <View className="w-full h-[1px] bg-white"/>
-                      <TouchableHighlight underlayColor={"#d9ffe6"} onPress={() => handleWeekFilterChange("last_last_week")}>
-                        <View className="flex-row gap-x-2 py-2">
-                          <Image 
-                            tintColor='#ffffff'
-                            source={filterWeekRange === "last_last_week" ? icons.verified : icons.filter}
-                            className="w-5 h-5"
-                            resizeMode='contain'
-                          />
-                          <Text className="font-pregular text-sm text-white">{"FURTHER"}</Text>
-                        </View>
-                      </TouchableHighlight>
-                      <View className="w-full h-[1px] bg-white"/>
-                      <TouchableHighlight underlayColor={"#d9ffe6"} onPress={() => toggleCalendar(true)}>
-                        <View className="flex-row gap-x-2 py-2">
-                          <Image 
-                            tintColor='#ffffff'
-                            source={icons.calendar}
-                            className="w-5 h-5"
-                            resizeMode='contain'
-                          />
-                          <Text className="font-pregular text-sm text-white">{"CALENDAR"}</Text>
-                        </View>
-                      </TouchableHighlight>
-                    </View>
-                  )}
-                  {showCalendar && (
-                    <DateTimePicker
-                      value={selectedWeek}
-                      mode="date"
-                      display="calendar"
-                      onChange={(event, date) => {
-                        handleWeekFilterChange("calendar");
-                        toggleCalendar(false);
-                        if (date) {
-                          const pickedDate = new Date(date);
-                        
-                          // Calculate the start of the week (Sunday)
-                          const currentDay = pickedDate.getDay();
-                          const startOfWeek = new Date(pickedDate);
-                          
-                          startOfWeek.setDate(pickedDate.getDate() - currentDay);
-                          startOfWeek.setHours(0, 0, 0, 0);
-                        
-                          // Update the selected week to start from Sunday
-                          setSelectedWeek(startOfWeek); // This is the Sunday of the selected week
-                        }
-                      }}
-                    />
-                  )}
-                </View>
                 </View>
                 <View className="w-[95%] pl-6 items-center justify-center -top-[12%]">
                   <View className="h-16">
@@ -630,7 +628,11 @@ const StatisticsScreen = ({ changePage, backPage }) => {
                     </View>
                     {/* Total Per Report Types */}
                     <View className="w-full justify-center h-52">
-                      <Text className="font-psemibold text-primary text-lg pb-3 pt-6">Total Per Report Type {`(${filterWeekRange === 'last_last_week' ? "FURTHER" : translate(filterWeekRange).toUpperCase()})`}</Text>
+                      {reports.length > 0 && 
+                        <Text className="font-psemibold text-primary text-lg pb-3 pt-6">
+                          Total Per Report Type {`(${filterWeekRange === 'last_last_week' ? "FURTHER" : translate(filterWeekRange).toUpperCase()})`}
+                        </Text>
+                      }
                       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                           <View className="flex-row gap-x-2">
                             {Object.entries(reportTypeCounts).map(([type, count]) => (
@@ -1326,6 +1328,11 @@ const StatisticsScreen = ({ changePage, backPage }) => {
                         <View className="w-[90%] h-[145px] bg-primary px-4 justify-center">
                           {lowArriveTime !== null && (
                             <>
+                              <View className="z-10 absolute -top-3 right-0 px-2 border-[1px] bg-primary border-white rounded-2xl">
+                                <Text className="text-base font-pregular text-white">
+                                    {`${lowArriveDistance} km`}
+                                </Text>
+                              </View>
                               <Text className="font-pblack text-white text-5xl pt-3 text-center">
                                 {lowArriveTime >= 3600
                                   ? `${(lowArriveTime / 3600).toFixed(2)}`
@@ -1355,6 +1362,11 @@ const StatisticsScreen = ({ changePage, backPage }) => {
                         <View className="w-[90%] h-[145px] bg-primary px-4 justify-center">
                           {highArriveTime !== null && (
                             <>
+                              <View className="z-10 absolute -top-3 right-0 px-2 border-[1px] bg-primary border-white rounded-2xl">
+                                <Text className="text-base font-pregular text-white">
+                                    {`${highArriveDistance} km`}
+                                </Text>
+                              </View>
                               <Text className="font-pblack text-white text-5xl pt-3 text-center">
                                 {highArriveTime >= 3600
                                   ? `${(highArriveTime / 3600).toFixed(2)}`

@@ -919,17 +919,17 @@ const DetailScreen = ({ changePage, backPage, status, loadings, savings }) => {
         <SafeAreaView className="w-full h-full bg-primary">
             <View className="w-full h-full items-center">
                 {selectedReport && reportFile(selectedReport)}
-                <View className="w-full h-[8%]">
-                    <ScrollView key={btnScrollKey} horizontal showsHorizontalScrollIndicator={false} ref={buttonScrollRef}>
-                        {reports.map((report, index) => (
-                            <View key={report.report_id} className={`h-full ${selectedReport && report.report_id === selectedReport.report_id ? "rounded-b-2xl bg-white" : ""} overflow-hidden justify-center`}>
-                                <TouchableOpacity className="h-full items-center justify-center px-6" onPress={() => toggleSelectedReport(report, index)} disabled={selectedReport && report.report_id === selectedReport.report_id}>
-                                    <Text className={`${selectedReport && report.report_id === selectedReport.report_id ? "font-rbold text-primary" : "font-rmedium text-white" } text-base`}>{'#'}{report.report_id}</Text>
-                                </TouchableOpacity>
-                            </View>
-                        ))}
-                    </ScrollView>
-                </View>
+                    <View className="w-full h-[8%]">
+                        <ScrollView key={btnScrollKey} horizontal showsHorizontalScrollIndicator={false} ref={buttonScrollRef}>
+                            {reports.map((report, index) => (
+                                <View key={report.report_id} className={`h-full ${selectedReport && report.report_id === selectedReport.report_id ? "rounded-b-2xl bg-white" : ""} overflow-hidden justify-center`}>
+                                    <TouchableOpacity className="h-full items-center justify-center px-6" onPress={() => toggleSelectedReport(report, index)} disabled={selectedReport && report.report_id === selectedReport.report_id}>
+                                        <Text className={`${selectedReport && report.report_id === selectedReport.report_id ? "font-rbold text-primary" : "font-rmedium text-white" } text-base`}>{'#'}{report.report_id}</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
+                        </ScrollView>
+                    </View>
                 {/* If there are no reports available */}
                 {reports.length === 0 && (
                     <View className="w-full h-[90%] justify-center items-center -top-[8%] pt-4">
@@ -953,7 +953,7 @@ const DetailScreen = ({ changePage, backPage, status, loadings, savings }) => {
                     </View>
                 )}
                 {/* Print Button */}
-                {isResponder && (
+                {reports.length !== 0 && isResponder && (
                     <TouchableHighlight
                         underlayColor={"#86ebaa"} 
                         className="w-24 h-24 absolute bottom-[13%] right-[4%] bg-primary rounded-3xl" 

@@ -1232,14 +1232,26 @@ const FormScreen = ({ savings, loadings, fails, status, changePage, backPage, pr
                             <View className="w-1/4 h-full justify-center">
                                 <Text className="font-rmedium text-primary-100 text-base">TIME</Text>
                             </View>
-                            <View className="w-1/4 h-fulljustify-center">
+                            <View className="w-1/4 h-full justify-center">
                                 <Text className="font-rmedium text-primary-100 text-base">DATE</Text>
                             </View>
                         </View>
                         <ScrollView className="w-full h-full" contentContainerStyle={{ alignItems: 'center'}}>
-                            {reports.map((report) => (
-                                reportRow(report)
-                            ))}
+                            {reports.length !== 0 ? (
+                                <>
+                                    {reports.map((report) => (
+                                        reportRow(report)
+                                    ))}
+                                </>
+                            ) : (
+                                <View className="w-full h-full py-3 border-b-[1px] border-primary flex-row">
+                                    <View className="w-full h-full items-center justify-center">
+                                        <Text className="font-pregular text-black text-base">
+                                            {"No Report Available at the Time."}
+                                        </Text>
+                                    </View>
+                                </View>
+                            )}
                         </ScrollView>
                     </View>
                 </>

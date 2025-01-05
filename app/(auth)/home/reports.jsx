@@ -103,7 +103,7 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
   // Address Dropdown Containers
   const [isAddressVisible, setAddressVisible] = useState(false); // Primary Address Logic
   const [selectedAddressOption, setSelectedAddressOption] = useState('current'); // Address Options Container
-  const [currentAddress, setCurrentAddress] = useState('Locating User...'); // Current Address Container
+  const [currentAddress, setCurrentAddress] = useState('Unable to Locate'); // Current Address Container
   // Services Needed Dropdown Containers
   const [isServiceVisible, setServiceVisible] = useState(false); // Primary Service Dropdown Logic
   const [selectedServices, setSelectedServices] = useState([]); // Selected Services Container
@@ -437,6 +437,26 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
     })();
   }, [permission]);
 
+  // Find the Address based on Latitude and Longitude
+  const reverseGeocode = async (latitude, longitude) => {
+    try {
+      let address = await Location.reverseGeocodeAsync({ latitude, longitude });
+      if (address.length > 0) {
+        const addressComponents = [
+          address[0].street,
+          address[0].city,
+          address[0].subregion || address[0].region,
+          address[0].isoCountryCode,
+        ];
+        return addressComponents.filter((comp) => comp).join(', ');
+      }
+      throw new Error('Unable to retrieve address');
+    } catch (error) {
+      console.error("Reverse geocoding failed:", error);
+      return null;
+    }
+  };  
+
   // Submit Button Lock Logic
   useEffect(() => {
     if (currentType && selectedHandler && photos.length > 0) {
@@ -742,6 +762,17 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
     const reportId = await generateReportId(currentType, handlerSelection);
   
     try {
+      if (currentAddress === 'Unable to Locate') {
+        console.log("Fetching address using report_location...");
+        const address = await reverseGeocode(
+          photos[0].location.latitude,
+          photos[0].location.longitude
+        );
+        if (address) {
+          setCurrentAddress(address); // Update the state
+        }
+      }
+
       const photoUploadPromises = photos.map(async (photo, index) => {
         const photoRef = ref(storage, `reports/${reportId}/photo_${index + 1}.jpg`);
 
@@ -775,7 +806,7 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
         report_id: reportId,
         ...report_form,
         report_date: incidentDate,
-        report_address: (selectedAddressOption === 'current' ? currentAddress : user.address),
+        report_address: currentAddress,
         incident_date: (() => {
           const currentDate = new Date();
           switch (selectedTimeOption) {

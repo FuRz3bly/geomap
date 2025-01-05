@@ -1,7 +1,7 @@
 {
   "name": "geomap",
   "main": "expo-router/entry",
-  "version": "1.5.7",
+  "version": "1.5.8",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
@@ -18,7 +18,7 @@
     "@expo/vector-icons": "^14.0.3",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native-community/datetimepicker": "^8.0.1",
-    "@react-native-community/netinfo": "^11.4.1",
+    "@react-native-community/netinfo": "^11.3.1",
     "@react-navigation/native": "^6.0.2",
     "docx": "^9.0.2",
     "expo": "^51.0.39",

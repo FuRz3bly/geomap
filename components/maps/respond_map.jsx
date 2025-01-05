@@ -442,6 +442,13 @@ const RespondMap = forwardRef((
           { latitude: selectReport?.report_location?.latitude, longitude: selectReport?.report_location?.longitude },
           'drive',
           async (coordinates, formattedTime, totalDurationInMinutes, distanceInKilometers, instructions) => { // Added 'instructions' parameter
+
+            const distance = getPreciseDistance(
+              { latitude: userAmenity.location.latitude, longitude: userAmenity.location.longitude },
+              { latitude: selectReport?.report_location.latitude, longitude: selectReport?.report_location.longitude }
+            );
+            const estimatedArrivalTime = calculateETA(distance);
+
             // Responder Details To Be Recorded
             const responderDetails = {
               full_name: user.full_name,
@@ -456,6 +463,7 @@ const RespondMap = forwardRef((
               },
               responder_status: 'departed',
               received_time: new Date(),
+              estimated_arrival_time: estimatedArrivalTime || totalDurationInMinutes,
               responder_location: new GeoPoint(responderLocation.latitude, responderLocation.longitude),
               route_coordinates: coordinates, // Save route to the database
               route_time: {
