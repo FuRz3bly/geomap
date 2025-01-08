@@ -1,11 +1,16 @@
-import React, { useEffect, useContext, useState } from 'react';
-import { View, Image, Text, BackHandler, Dimensions, ScrollView, TouchableOpacity, ActivityIndicator, TouchableHighlight, TextInput } from 'react-native';
+import React, { useEffect, useContext, useState, useRef } from 'react';
+import { View, Image, Text, BackHandler, Dimensions, ScrollView, TouchableOpacity, ActivityIndicator, TouchableHighlight, TextInput, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Swiper from 'react-native-swiper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
+
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
+import { WebView } from 'react-native-webview';
 
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updateEmail } from 'firebase/auth';
 import { getStorage, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
@@ -15,6 +20,7 @@ import { storage, auth, db } from '../../../firebaseConfig';
 import UserContext from '../../../components/UserContext';
 
 import { images, icons } from '../../../constants';
+import { translate } from '../../../components/ToolsContext';
 
 const ProfileScreen = ({ changePage, backPage }) => {
     const { user, isResponder } = useContext(UserContext);
@@ -57,7 +63,17 @@ const ProfileScreen = ({ changePage, backPage }) => {
     const [photoIDURI, setPhotoIDURI] = useState(null);
     const [editEmail, setEditEmail] = useState(false);
     const [hasRequested, setRequested] = useState(false);
+
+    const [reports, setReports] = useState([]);
+    const [averageRespoTime, setAverageRespoTime] = useState(0);
+    const [averageArriveTime, setAverageArriveTime] = useState(0);
+    const [averageArriveDistance, setAverageArriveDistance] = useState(0);
+
+    const [htmlContent, setHtmlContent] = useState(''); // HTML Container
+    const [viewPDF, setViewPDF] = useState(false);
+    const webViewRef = useRef(null);
     
+    // Check if User has Pending Request
     useEffect(() => {
         // Exit if `user` or `user.uid` is not defined
         if (!user || !user.uid) return;
@@ -128,8 +144,39 @@ const ProfileScreen = ({ changePage, backPage }) => {
         }
     }, [auth]);
 
+    // Real-time listener for all reports with same Responder
     useEffect(() => {
-        // Real-time listener for all amenities
+        if (!user?.full_name) return;
+    
+        const q = query(
+            collection(db, 'reports'),
+            where('responder.full_name', '==', user.full_name)
+        );
+
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const reportsList = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+            }));
+            setReports(reportsList);
+
+            const {
+                averageResponseTime,
+                averageArrivalTime,
+                averageDistance,
+            } = generateStatistics(reportsList);
+
+            setAverageRespoTime(averageResponseTime);
+            setAverageArriveTime(averageArrivalTime);
+            setAverageArriveDistance(averageDistance);
+        });
+
+        // Cleanup on unmount
+        return () => unsubscribe();
+    }, [user?.full_name]);
+
+    // Real-time listener for all amenities
+    useEffect(() => {
         const amenitiesRef = collection(db, 'amenity');
         const unsubscribeAmenities = onSnapshot(amenitiesRef, (snapshot) => {
             const amenitiesList = snapshot.docs.map((doc) => ({
@@ -143,6 +190,7 @@ const ProfileScreen = ({ changePage, backPage }) => {
         return () => unsubscribeAmenities();
     }, [db]);
 
+    // Filter All Amenity Based on Search Query
     useEffect(() => {
         const filtered = allAmenity.filter((amenity) =>
             amenity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -352,8 +400,467 @@ const ProfileScreen = ({ changePage, backPage }) => {
         }
     };
 
+    const generateStatistics = (reportsList) => {
+        if (!reportsList || reportsList.length === 0) {
+          return {
+            averageResponseTime: 0,
+            averageArrivalTime: 0,
+            averageDistance: 0,
+          }; // Return defaults if the list is empty
+        }
+      
+        let totalResponseSum = 0; // Total sum of response times
+        let totalArrivalTime = 0; // Total sum of arrival times
+        let totalDistance = 0; // Total distance in kilometers
+        let validResponseCount = 0; // Counter for valid response times
+        let validArrivalCount = 0; // Counter for valid arrival times and distances
+      
+        reportsList.forEach((report) => {
+          const reportDate = report?.report_date?.seconds
+            ? new Date(report.report_date.seconds * 1000)
+            : null;
+          const receivedTime = report?.responder?.received_time?.seconds
+            ? new Date(report.responder.received_time.seconds * 1000)
+            : null;
+          const arrivalTime = report?.responder?.arrival_time?.seconds
+            ? new Date(report.responder.arrival_time.seconds * 1000)
+            : null;
+          const distance = parseFloat(report?.responder?.route_time?.distance) || 0;
+      
+          // Calculate response time (report_date -> received_time)
+          if (reportDate && receivedTime) {
+            const responseTime = (receivedTime - reportDate) / 1000 / 60; // Convert to minutes
+            totalResponseSum += responseTime;
+            validResponseCount++;
+          }
+      
+          // Calculate arrival time (received_time -> arrival_time) and accumulate distance
+          if (receivedTime && arrivalTime) {
+            const arrivalDuration = (arrivalTime - receivedTime) / 1000 / 60; // Convert to minutes
+            totalArrivalTime += arrivalDuration;
+            totalDistance += distance;
+            validArrivalCount++;
+          }
+        });
+      
+        // Calculate averages and truncate to 2 decimal places
+        const averageResponseTime =
+          validResponseCount > 0
+            ? Math.floor((totalResponseSum / validResponseCount) * 100) / 100
+            : 0;
+      
+        const averageArrivalTime =
+          validArrivalCount > 0
+            ? Math.floor((totalArrivalTime / validArrivalCount) * 100) / 100
+            : 0;
+      
+        const averageDistance =
+          validArrivalCount > 0
+            ? Math.floor((totalDistance / validArrivalCount) * 100) / 100
+            : 0;
+      
+        return {
+          averageResponseTime,
+          averageArrivalTime,
+          averageDistance,
+        };
+    };
+
+    const generateDoc = (reports, amenity) => {
+        // Format Data - January 06, 2025
+        const formatDate = (date) => {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return date.toLocaleDateString('en-US', options);
+        };
+
+        // Translate report types and count occurrences
+        const reportTypeCounts = reports.reduce((acc, report) => {
+            const translatedType = translate(report.report_type); // Translate here
+            acc[translatedType] = (acc[translatedType] || 0) + 1;
+            return acc;
+        }, {});
+
+        const totalReports = reports.length; // Calculate the total number of reports
+
+        // Generate table rows for report statistics (type, count, percentage)
+        const tableRows = Object.entries(reportTypeCounts)
+            .sort((a, b) => b[1] - a[1]) // Sort by count descending
+            .map(
+                ([type, count]) => {
+                    const percentage = ((count / totalReports) * 100).toFixed(2); // Calculate percentage
+                    return `
+                        <tr>
+                            <td>${type}</td>
+                            <td style="text-align: right;">${count}</td>
+                            <td style="text-align: right;">${percentage}%</td>
+                        </tr>
+                    `;
+                }
+            )
+            .join("");
+
+        // Add bottom row for total
+        const totalRow = `
+        <tr>
+            <td><strong>Total Report Types</strong></td>
+            <td style="text-align: right;"><strong>${totalReports}</strong></td>
+            <td style="text-align: right;"><strong>100.00%</strong></td>
+        </tr>
+        `;
+
+        // Combine rows with total row
+        const finalTableRows = tableRows + totalRow;
+
+        const responseTimes = [];
+
+        // Calculate response times for each report
+        const responseTimeRows = reports
+            .sort((a, b) => {
+                const aTime = a.responder?.received_time?.seconds || 0;
+                const bTime = b.responder?.received_time?.seconds || 0;
+                return bTime - aTime; // Sort descending by received_time
+            })
+            .slice(0, 5) // Take only the 5 most recent reports
+            .map((report) => {
+                const receivedTime = report.responder?.received_time?.seconds
+                    ? new Date(report.responder.received_time.seconds * 1000)
+                    : null;
+                const arrivalTime = report.responder?.arrival_time?.seconds
+                    ? new Date(report.responder.arrival_time.seconds * 1000)
+                    : null;
+
+                const formatTime = (date) =>
+                    date
+                        ? date.toLocaleTimeString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                        })
+                        : "N/A";
+
+                const responseTimeInMinutes =
+                    receivedTime && arrivalTime
+                        ? ((arrivalTime - receivedTime) / 60000).toFixed(2)
+                        : "N/A"; // Convert to minutes if times are valid
+
+                if (responseTimeInMinutes !== "N/A") {
+                    responseTimes.push(parseFloat(responseTimeInMinutes)); // Collect valid times
+                }
+
+                return `
+                    <tr>
+                        <td>${report.report_id}</td>
+                        <td style="text-align: right;">${formatTime(receivedTime)}</td>
+                        <td style="text-align: right;">${formatTime(arrivalTime)}</td>
+                        <td style="text-align: right;">${responseTimeInMinutes} mins</td>
+                    </tr>
+                `;
+            })
+            .join("");
+
+
+        const averageResponseTime = responseTimes.length
+            ? (responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length).toFixed(2)
+            : "N/A";
+        
+        const fastestResponseTime = Math.min(...responseTimes).toFixed(2) + " mins";
+        const slowestResponseTime = Math.max(...responseTimes).toFixed(2) + " mins";
+        const medianResponseTime = calculateMedian(responseTimes).toFixed(2) + " mins";
+
+        function calculateMedian(arr) {
+            const sorted = arr.slice().sort((a, b) => a - b);
+            const mid = Math.floor(sorted.length / 2);
+            return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+        }
+
+        // Add the footer row
+        const footerRow = `
+            <tr>
+                <th style="text-align: center;">Fastest</th>
+                <th style="text-align: center;">Median</th>
+                <th style="text-align: center;">Slowest</th>
+                <th style="text-align: center;">Average</th>
+            </tr>
+            <tr>
+                <td style="text-align: center;">${fastestResponseTime}</td>
+                <td style="text-align: center;">${medianResponseTime}</td>
+                <td style="text-align: center;">${slowestResponseTime}</td>
+                <td style="text-align: center;">${averageResponseTime} mins</td>
+            </tr>
+        `;
+
+        const reportTypeTable = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Report Type</th>
+                        <th>Count</th>
+                        <th>Percent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${finalTableRows}
+                </tbody>
+            </table>
+        `;
+
+        const responseTimeTable = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Report Type</th>
+                        <th>Receive Time</th>
+                        <th>Arrival Time</th>
+                        <th>Response Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${responseTimeRows}
+                    <tr>
+                        <td colspan="4" style="height: 20px; border: none;"></td> <!-- Spacer Row -->
+                    </tr>
+                </tbody>
+                <tfoot>
+                    ${footerRow}
+                </tfoot>
+            </table>
+        `;
+
+        return `
+            <html>
+                <head>
+                    <style>
+                        body { 
+                            font-family: Arial, sans-serif; 
+                            background-color: white; 
+                            margin: 0mm 2mm 0mm 3mm;
+                            width: 210mm;
+                            height: 297mm;
+                            padding: 40px;
+                            overflow: hidden;
+                            transform: scale(1.1, 1.1);
+                            transform-origin: left top;
+                        }
+                        .standard-heading { 
+                            text-align: center; 
+                            color: black; 
+                            font-size: 18px; 
+                            margin: 0;
+                            padding: 12px;
+                            background-color: transparent;
+                        }
+                        .highlighted-heading { 
+                            text-align: center; 
+                            color: white;
+                            background-color: #57b378;
+                            font-size: 18px;
+                            margin: 0;
+                            padding: 12px;
+                        }
+                        .error-heading {
+                            text-align: center; 
+                            color: white;
+                            background-color: #de4e55;
+                            font-size: 18px;
+                            margin: 0;
+                            padding: 12px;
+                        }
+                        p { 
+                            font-size: 16px; 
+                            margin: 0;
+                            padding: 5px;
+                        }
+                        p.error { 
+                            color: #de4e55;
+                            font-size: 16px;
+                            margin: 0;
+                            padding: 5px;
+                        }
+                        .right-align {
+                            text-align: right; 
+                        }
+                        .spacer {
+                            height: 20px;
+                            margin: 0; 
+                        }
+                        .contact-info {
+                            display: flex;
+                            justify-content: space-between;
+                        }
+                        .contact-info div {
+                            flex: 1;
+                            margin: 0;
+                            padding: 5px;
+                        }
+                        .checkbox {
+                            margin: 5px 0;
+                        }
+                        .table-container {
+                            display: flex;
+                            justify-content: space-between;
+                        }
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin: 20px 0;
+                            color: black;
+                        }
+                        table:first-of-type {
+                            width: 39%; /* First table width */
+                            border-collapse: collapse;
+                            margin: 20px 0;
+                            color: black;
+                        }
+                        table:nth-of-type(2) {
+                            width: 59%; /* Second table width */
+                            border-collapse: collapse;
+                            margin: 20px 0;
+                            color: black;
+                        }
+                        table th, table td {
+                            border: 1px solid black;
+                            padding: 8px;
+                            text-align: left;
+                        }
+                        table th {
+                            background-color: white;
+                            font-weight: bold;
+                            text-align: center;
+                        }
+                        table tr:nth-child(even) {
+                            background-color: #f9f9f9;
+                        }
+                        @page { 
+                            size: A4;
+                            margin: 0mm 0mm 0mm 0mm; 
+                        }
+                        @media print {
+                            body {
+                                max-width: 100%;
+                                max-height: 50%;
+                                transform: scale(1.1);
+                                transform-origin: left top;
+                                margin: 0mm 10mm 0mm 2mm;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <p class="right-align">User ID: #${user?.user_id}</p>
+                    <h1 class="standard-heading">RESPONDER STATISTICS</h1>
+                    <p>This form collects and displays emergency responder statistics, including response times and distances, to evaluate performance, improve efficiency, and enhance emergency response outcomes.</p>
+                    <div class="spacer"></div>
+                    <div class="contact-info">
+                        <div>Date of Form: ${formatDate(new Date())}</div>
+                        <div>Handler: ${translate(amenity?.type)}</div>
+                    </div>
+                    <div class="spacer"></div>
+                    <h1 class="highlighted-heading">RESPONDER</h1>
+                    <div class="spacer"></div>
+                    <p><strong>Responder Details:</strong></p>
+                    <div class="contact-info">
+                        <div>Full Name: ${user?.full_name?.first_name} ${user?.full_name?.middle_name} ${user?.full_name?.last_name}</div>
+                        <div>Rank / Position: ${user?.rank}</div>
+                    </div>
+                    <div class="contact-info">
+                        <div>Address: ${user?.address}</div>
+                        <div>Total Reports Responded: ${reports.length}</div>
+                    </div>
+                    <p>Identification: UID: ${user?.uid}</p>
+                    <div class="spacer"></div>
+                    <h1 class="highlighted-heading">STATION DETAILS</h1>
+                    <div class="spacer"></div>
+                    <p>Station Name: ${amenity?.name} ${amenity?.description}</p>
+                    <div class="contact-info">
+                        <div>Identification: ID: ${amenity?.id}</div>
+                        <div>Address: ${amenity?.address}</div>
+                    </div>
+                    <div class="spacer"></div>
+                    <h1 class="highlighted-heading">STATISTICS</h1>
+                        <div class="table-container">
+                            ${reportTypeTable}
+                            ${responseTimeTable}
+                        </div>
+                    </div>
+                    <div class="spacer"></div>
+                </body>
+            </html>
+        `;
+    };
+
+    const handleGen = async () => {
+        setViewPDF(!viewPDF);
+        const htmlDoc = generateDoc(reports, amenity);
+        setHtmlContent(htmlDoc);
+    };
+
+    const print = async () => {
+        try {      
+          const { uri } = await Print.printToFileAsync({
+            html: htmlContent,
+          });
+          const newFileName = `statistics_form.pdf`;
+          const newUri = FileSystem.documentDirectory + newFileName;
+          await FileSystem.moveAsync({ from: uri, to: newUri });
+          await Sharing.shareAsync(newUri);
+        } catch (error) {
+          console.error(error);
+          Alert.alert('Error', 'Failed to generate PDF');
+        }
+    };
+
+    const reloadWeb = () => {
+        if (webViewRef.current) {
+          webViewRef.current.reload(); // Call the reload method
+          setHtmlContent(generateDoc(reports, amenity));
+        }
+    };
+
     return (
         <SafeAreaView className="bg-white w-full h-[110%] items-center -top-[5%]">
+            {viewPDF && 
+                <View className="w-full h-full bg-black/50 items-center justify-center absolute z-40">
+                    <View className={`overflow-hidden bg-white`} style={{ width: width * 1.1, height: height * 0.6 }}>
+                        <WebView
+                            ref={webViewRef}
+                            originWhitelist={['*']}
+                            source={{ html: htmlContent }}
+                            style={{ flex: 1 }}
+                            scalesPageToFit={false}
+                            javaScriptEnabled={true}
+                            domStorageEnabled={true}
+                            injectedJavaScript={`
+                                document.body.style.zoom = "0.45";
+                                document.body.style.position = "relative";
+                                document.body.style.left = "50%";
+                                document.body.style.top = "50%";
+                                document.body.style.transform = "translate(-50%, -50%)";
+                                document.body.style.margin = "0";
+                            `}
+                            androidHardwareAccelerationDisabled={false}
+                        />
+                    </View>
+                    <View className="w-[30%] h-[6%] absolute bottom-[10%] right-[2%] z-20 items-end justify-center">
+                        <TouchableHighlight className="w-full h-full bg-white px-4 py-1 rounded-2xl items-center justify-center" underlayColor={'#3b8a57'} onPress={print}>
+                            <Text className="text-base font-rbase text-primary">{'PRINT'}</Text>
+                        </TouchableHighlight>
+                    </View>
+                    {/* <View className="w-[30%] h-[6%] absolute bottom-[10%] right-[35%] z-20 items-end justify-center">
+                        <TouchableHighlight className="w-full h-full bg-white px-4 py-1 rounded-2xl items-center justify-center" underlayColor={'#3b8a57'} onPress={reloadWeb}>
+                            <Text className="text-base font-rbase text-primary">{'RELOAD'}</Text>
+                        </TouchableHighlight>
+                    </View> */}
+                    <View className="w-[20%] h-[6%] absolute bottom-[10%] left-[2%] z-20 items-end justify-center">
+                        <TouchableHighlight className="w-full h-full bg-white px-4 py-1 rounded-2xl items-center justify-center" underlayColor={'#3b8a57'} onPress={() => setViewPDF(false)}>
+                            <Image 
+                                tintColor={"#57b378"}
+                                source={icons.close}
+                                className="w-[50%] h-[50%]"
+                                resizeMode='contain'
+                            />
+                        </TouchableHighlight>
+                    </View>
+                </View>
+            }
             {applyRespo ? (
                 <>
                     <ScrollView showsVerticalScrollIndicator={true} className="w-full h-full" contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
@@ -1008,14 +1515,80 @@ const ProfileScreen = ({ changePage, backPage }) => {
                                         )}
                                     </ScrollView>
                                 </View>
-                                <View className={`w-full h-[62%] absolute top-[34%] inset-0 items-center`}>
-                                    {/* Responder Statistics */}
-                                    <View className="z-10 absolute -top-3 left-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
-                                        <Text className="text-base font-rmedium text-primary">
-                                            {'RESPONDER STATISTICS'}
-                                        </Text>
+                                {isResponder &&
+                                    <View className={`w-full h-[62%] absolute top-[34%] inset-0 items-center`}>
+                                        {/* Responder Statistics */}
+                                        <View className="z-10 absolute -top-3 left-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
+                                            <Text className="text-base font-rmedium text-primary">
+                                                {'RESPONDER STATISTICS'}
+                                            </Text>
+                                        </View>
+                                        <ScrollView showsVerticalScrollIndicator={true} className="w-full h-full" contentContainerStyle={{ alignItems: 'center', justifyContent: 'center'}}>
+                                            {/* Responded Reports */}
+                                            <View className="w-full h-16 border-b-0.5 border-primary items-center flex-row">
+                                                <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
+                                                    <Text className="text-base font-rbase text-primary">{'Total Reports Responded'}</Text>
+                                                </View>
+                                                <View className="w-[25%] h-full items-center justify-center">
+                                                    <Image 
+                                                        tintColor="#57b378"
+                                                        source={icons.reportPoster}
+                                                        className="w-[35%] h-[35%]"
+                                                        resizeMode='contain'
+                                                    />
+                                                </View>
+                                                <View className="w-[75%] h-full justify-center">
+                                                    <Text className="text-lg font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
+                                                        {reports.length}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                            {/* Average Response Time */}
+                                            <View className="w-full h-16 border-b-0.5 border-primary items-center flex-row">
+                                                <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
+                                                    <Text className="text-base font-rbase text-primary">{'Average Response Time'}</Text>
+                                                </View>
+                                                <View className="w-[25%] h-full items-center justify-center">
+                                                    <Image 
+                                                        tintColor="#57b378"
+                                                        source={icons.received}
+                                                        className="w-[35%] h-[35%]"
+                                                        resizeMode='contain'
+                                                    />
+                                                </View>
+                                                <View className="w-[75%] h-full justify-center">
+                                                    <Text className="text-lg font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
+                                                        {averageRespoTime ? `${averageRespoTime} minutes` : '0.00 minutes'}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                            {/* Average Arrival Time */}
+                                            <View className="w-full h-16 border-b-0.5 border-primary items-center flex-row mb-10">
+                                                <View className="z-10 absolute -bottom-3 right-2 bg-white px-2 border-0.5 border-primary rounded-2xl">
+                                                    <Text className="text-base font-rbase text-primary">{'Average Arrival Time'}</Text>
+                                                </View>
+                                                <View className="w-[25%] h-full items-center justify-center">
+                                                    <Image 
+                                                        tintColor="#57b378"
+                                                        source={icons.arrived}
+                                                        className="w-[35%] h-[35%]"
+                                                        resizeMode='contain'
+                                                    />
+                                                </View>
+                                                <View className="w-[75%] h-full justify-center">
+                                                    <Text className="text-lg font-rbase text-white-200" numberOfLines={1} ellipsizeMode='tail'>
+                                                        {averageArriveTime ? `${averageArriveTime} minutes` : '0.00 minutes'}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        </ScrollView>
+                                        <View className="w-[30%] h-[6%] absolute top-[45%] right-[2%] z-20 items-end justify-center">
+                                            <TouchableHighlight className="w-full h-full bg-primary px-4 py-1 rounded-2xl items-center justify-center" underlayColor={'#fef9c3'} onPress={handleGen}>
+                                                <Text className="text-base font-rbase text-white">{'PRINT'}</Text>
+                                            </TouchableHighlight>
+                                        </View>
                                     </View>
-                                </View>
+                                }
                             </Swiper>
                         </>
                     ) : (

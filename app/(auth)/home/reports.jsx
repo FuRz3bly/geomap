@@ -438,23 +438,42 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
   }, [permission]);
 
   // Find the Address based on Latitude and Longitude
-  const reverseGeocode = async (latitude, longitude) => {
-    try {
-      let address = await Location.reverseGeocodeAsync({ latitude, longitude });
-      if (address.length > 0) {
-        const addressComponents = [
-          address[0].street,
-          address[0].city,
-          address[0].subregion || address[0].region,
-          address[0].isoCountryCode,
-        ];
-        return addressComponents.filter((comp) => comp).join(', ');
+  const reverseGeocode = async (latitude, longitude, maxRetries = 10, delayMs = 2000) => {
+    let retries = 0;
+  
+    while (retries < maxRetries) {
+      try {
+        console.log(`Reverse geocoding attempt ${retries + 1}...`);
+        
+        let address = await Location.reverseGeocodeAsync({ latitude, longitude });
+  
+        if (address.length > 0) {
+          const addressComponents = [
+            address[0].street,
+            address[0].city,
+            address[0].subregion || address[0].region,
+            address[0].isoCountryCode,
+          ];
+  
+          const formattedAddress = addressComponents.filter((comp) => comp).join(', ');
+          console.log("Reverse geocoding successful:", formattedAddress);
+          return formattedAddress; // Return the formatted address
+        }
+  
+        throw new Error('Address data is empty'); // Handle case where address array is empty
+      } catch (error) {
+        console.error("Reverse geocoding failed:", error.message);
       }
-      throw new Error('Unable to retrieve address');
-    } catch (error) {
-      console.error("Reverse geocoding failed:", error);
-      return null;
+  
+      retries++;
+      if (retries < maxRetries) {
+        console.log(`Retrying in ${delayMs / 1000} seconds...`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs)); // Wait before retrying
+      }
     }
+  
+    console.error("Failed to retrieve address after maximum retries.");
+    return null; // Return null if all retries fail
   };  
 
   // Submit Button Lock Logic
@@ -768,8 +787,12 @@ const ReportScreen = ({ changePage, backPage, savings, loadings, fails, status, 
           photos[0].location.latitude,
           photos[0].location.longitude
         );
+  
         if (address) {
           setCurrentAddress(address); // Update the state
+        } else {
+          console.error("Unable to fetch address after retries.");
+          throw new Error("Address resolution failed.");
         }
       }
 

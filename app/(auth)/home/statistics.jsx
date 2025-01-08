@@ -1,10 +1,15 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, TextInput, Image, ScrollView, TouchableOpacity, TouchableHighlight, Alert, ActivityIndicator, BackHandler, Dimensions } from 'react-native';
+import React, { useContext, useEffect, useState, useRef } from 'react';
+import { View, Text, TextInput, Image, ScrollView, TouchableOpacity, TouchableHighlight, Alert, ActivityIndicator, BackHandler, Dimensions, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { LineChart, PieChart } from 'react-native-chart-kit';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
+
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
+import { WebView } from 'react-native-webview';
 
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
@@ -47,6 +52,43 @@ const StatisticsScreen = ({ changePage, backPage }) => {
   const [lowArriveDistance, setLowArriveDistance] = useState(0);
   const [lowArriveID, setLowArriveID] = useState('') // Lowest Arrival Time Report ID
   const [aveArriveTime, setAveArriveTime] = useState(0); // Average Arrival Time
+
+  const [htmlContent, setHtmlContent] = useState(''); // HTML Container
+  const [viewPDF, setViewPDF] = useState(false);
+  const [viewOptions, setViewOptions] = useState(false);
+  const webViewRef = useRef(null);
+
+  const [isFromDropdownOpen, setIsFromDropdownOpen] = useState(false);
+  const [isToDropdownOpen, setIsToDropdownOpen] = useState(false);
+  const [selectedFromMonth, setSelectedFromMonth] = useState('Select Month');
+  const [selectedToMonth, setSelectedToMonth] = useState('Select Month');
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState('Select Month');
+
+  const [isYearOpen, setIsYearOpen] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(2025);
+  const [isDateRange, setIsDateRange] = useState(true);
+
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 
+    'June', 'July', 'August', 'September', 'October', 
+    'November', 'December'
+  ];
+
+  const years = [ 2024, 2025 ];
+
+  const currentMonthIndex = new Date().getMonth();
+
+  const fromMonths = selectedYear === 2025 ? [months[currentMonthIndex]] : months;
+  const toMonths = fromMonths.filter((month) => month !== selectedFromMonth);
+
+  // Update isDateRange based on the length of fromMonths
+  useEffect(() => {
+    if (fromMonths.length === 1) {
+      setIsDateRange(false); // Disable date range if only one month is available
+    }
+  }, [fromMonths]);
 
   // Translator Function
   const translate = (key) => {
@@ -419,12 +461,901 @@ const StatisticsScreen = ({ changePage, backPage }) => {
     const s = (seconds % 60).toFixed(2);
     return `${m}M ${s}S`;
   };
+
+  const generateDoc = (reports, amenity) => {
+    // Translate report types and count occurrences
+    const reportTypeCounts = reports.reduce((acc, report) => {
+        const translatedType = translate(report.report_type); // Translate here
+        acc[translatedType] = (acc[translatedType] || 0) + 1;
+        return acc;
+    }, {});
+
+    const monthYear = isDateRange ? `${selectedFromMonth} - ${selectedToMonth} ${selectedYear}` : `${selectedMonth} ${selectedYear}`
+
+    const totalReports = reports.length; // Calculate the total number of reports
+
+    // Generate table rows for report statistics (type, count, percentage)
+    const tableRows = Object.entries(reportTypeCounts)
+      .sort((a, b) => b[1] - a[1]) // Sort by count descending
+      .map(([type, count]) => {
+          const percentage = ((count / totalReports) * 100).toFixed(2); // Calculate percentage
+          return `
+              <tr>
+                  <td>${type}</td>
+                  <td style="text-align: right;">${count}</td>
+                  <td style="text-align: right;">${percentage}%</td>
+                  <td>
+                      <div style="
+                          background-color: #57b378;
+                          height: 20px;
+                          width: ${percentage}%;
+                          max-width: 100%;
+                          margin: 5px 0;
+                      "></div>
+                  </td>
+              </tr>
+          `;
+      })
+      .join("");
+
+    // Add bottom row for total
+    const totalRow = `
+      <tr>
+          <td><strong>Total Report Types</strong></td>
+          <td style="text-align: right;"><strong>${totalReports}</strong></td>
+          <td colspan="2" style="text-align: right;"><strong>100.00%</strong></td>
+      </tr>
+    `;
+
+    // Combine rows with total row
+    const finalTableRows = tableRows + totalRow;
+
+    const responseTimes = [];
+
+    // Calculate response times for each report
+    const responseTimeRows = reports
+        .sort((a, b) => {
+            const aTime = a.responder?.received_time?.seconds || 0;
+            const bTime = b.responder?.received_time?.seconds || 0;
+            return bTime - aTime; // Sort descending by received_time
+        })
+        .slice(0, 5) // Take only the 5 most recent reports
+        .map((report) => {
+            const receivedTime = report.responder?.received_time?.seconds
+                ? new Date(report.responder.received_time.seconds * 1000)
+                : null;
+            const arrivalTime = report.responder?.arrival_time?.seconds
+                ? new Date(report.responder.arrival_time.seconds * 1000)
+                : null;
+
+            const formatTime = (date) =>
+                date
+                    ? date.toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                    })
+                    : "N/A";
+
+            const responseTimeInMinutes =
+                receivedTime && arrivalTime
+                    ? ((arrivalTime - receivedTime) / 60000).toFixed(2)
+                    : "N/A"; // Convert to minutes if times are valid
+
+            if (responseTimeInMinutes !== "N/A") {
+                responseTimes.push(parseFloat(responseTimeInMinutes)); // Collect valid times
+            }
+
+            return `
+                <tr>
+                    <td>${report.report_id}</td>
+                    <td style="text-align: right;">${formatTime(receivedTime)}</td>
+                    <td style="text-align: right;">${formatTime(arrivalTime)}</td>
+                    <td style="text-align: right;">${responseTimeInMinutes} mins</td>
+                </tr>
+            `;
+        })
+        .join("");
+
+    const averageResponseTime = responseTimes.length
+        ? (responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length).toFixed(2)
+        : "N/A";
     
+    const fastestResponseTime = Math.min(...responseTimes).toFixed(2) + " mins";
+    const slowestResponseTime = Math.max(...responseTimes).toFixed(2) + " mins";
+    const medianResponseTime = calculateMedian(responseTimes).toFixed(2) + " mins";
+
+    function calculateMedian(arr) {
+        const sorted = arr.slice().sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    };
+
+    const withinResponseTime = reports.filter((report) => {
+      const receivedTime = report.responder?.received_time?.seconds
+          ? new Date(report.responder.received_time.seconds * 1000)
+          : null;
+      const arrivalTime = report.responder?.arrival_time?.seconds
+          ? new Date(report.responder.arrival_time.seconds * 1000)
+          : null;
+  
+      if (receivedTime && arrivalTime) {
+          const responseTimeInMinutes = (arrivalTime - receivedTime) / 60000;
+          return responseTimeInMinutes <= 7; // Check against the ideal response time
+      }
+  
+      return false; // Exclude invalid times
+    }).length;
+
+    const exceedingResponseTime = reports.filter((report) => {
+      const receivedTime = report.responder?.received_time?.seconds
+          ? new Date(report.responder.received_time.seconds * 1000)
+          : null;
+      const arrivalTime = report.responder?.arrival_time?.seconds
+          ? new Date(report.responder.arrival_time.seconds * 1000)
+          : null;
+  
+      if (receivedTime && arrivalTime) {
+          const responseTimeInMinutes = (arrivalTime - receivedTime) / 60000;
+          return responseTimeInMinutes > 7; // Check for exceeding the ideal response time
+      }
+  
+      return false; // Exclude invalid times
+    }).length;
+  
+    // Add the footer row
+    const footerRow = `
+        <tr>
+            <th style="text-align: center;">Fastest</th>
+            <th style="text-align: center;">Median</th>
+            <th style="text-align: center;">Slowest</th>
+            <th style="text-align: center;">Average</th>
+        </tr>
+        <tr>
+            <td style="text-align: center;">${fastestResponseTime}</td>
+            <td style="text-align: center;">${medianResponseTime}</td>
+            <td style="text-align: center;">${slowestResponseTime}</td>
+            <td style="text-align: center;">${averageResponseTime} mins</td>
+        </tr>
+    `;
+
+    const reportTypeTable = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Report Type</th>
+                    <th>Count</th>
+                    <th>Percent</th>
+                    <th>Graph</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${finalTableRows}
+            </tbody>
+        </table>
+    `;
+
+    const responseTimeTable = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Report Type</th>
+                    <th>Receive Time</th>
+                    <th>Arrival Time</th>
+                    <th>Response Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${responseTimeRows}
+                <tr>
+                    <td colspan="4" style="height: 20px; border: none;"></td> <!-- Spacer Row -->
+                </tr>
+            </tbody>
+            <tfoot>
+                ${footerRow}
+            </tfoot>
+        </table>
+    `;
+
+    const unclassifiedCount = totalReports - Object.values(reportTypeCounts).reduce((a, b) => a + b, 0);
+    const unclassifiedPercentage = ((unclassifiedCount / totalReports) * 100).toFixed(2);
+    const notableTypes = Object.entries(reportTypeCounts)
+      .slice(1, 3)
+      .map(([type, count]) => `${type} (${count} ${count === 1 ? 'report' : 'reports'}, ${(count / totalReports * 100).toFixed(2)}%)`);
+
+    const formattedNotableTypes = notableTypes.length > 1
+        ? notableTypes.slice(0, -1).join(', ') + ' and ' + notableTypes.slice(-1)
+        : notableTypes.join(', ');
+
+    let responseSummary;
+
+    // Helper function to format percentage
+    const formatPercentage = (count, total) => ((count / total) * 100).toFixed(2);
+    
+    // Helper function to pluralize text
+    const pluralize = (count, singular, plural) => (count === 1 ? singular : plural);
+    
+    // Determine response texts
+    const totalResponseText = pluralize(totalReports, "response", "responses");
+    const withinResponseText = pluralize(withinResponseTime, "response", "responses");
+    const exceedingResponseText = pluralize(exceedingResponseTime, "response", "responses");
+    
+    // Construct the response summary
+    if (totalReports === 0) {
+        responseSummary = `No responses were documented during this period.`;
+    } else if (withinResponseTime > 0 && exceedingResponseTime > 0) {
+        const withinPercentage = formatPercentage(withinResponseTime, totalReports);
+        const exceedingPercentage = formatPercentage(exceedingResponseTime, totalReports);
+    
+        if (withinResponseTime >= exceedingResponseTime) {
+            responseSummary = `A total of ${totalReports} ${totalResponseText} was documented, with ${withinResponseTime} (${withinPercentage}%) ${withinResponseText} achieving the ideal response time of up to seven (7) minutes. However, ${exceedingResponseTime} (${exceedingPercentage}%) ${exceedingResponseText} exceeded this timeframe due to factors such as distance and traffic.`;
+        } else {
+            responseSummary = `A total of ${totalReports} ${totalResponseText} was documented. However, only ${withinResponseTime} (${withinPercentage}%) ${withinResponseText} achieved the ideal response time of up to seven (7) minutes, while the majority, ${exceedingResponseTime} (${exceedingPercentage}%) ${exceedingResponseText}, exceeded this timeframe due to factors such as distance and traffic.`;
+    }
+    } else if (withinResponseTime > 0) {
+        const withinPercentage = formatPercentage(withinResponseTime, totalReports);
+        responseSummary = `A total of ${totalReports} ${totalResponseText} was documented, with ${withinResponseTime} (${withinPercentage}%) ${withinResponseText} achieving the ideal response time of up to seven (7) minutes.`;
+    } else {
+        const exceedingPercentage = formatPercentage(exceedingResponseTime, totalReports);
+        responseSummary = `A total of ${totalReports} ${totalResponseText} was documented, with ${exceedingResponseTime} (${exceedingPercentage}%) ${exceedingResponseText} exceeding the ideal response time of up to seven (7) minutes due to factors such as distance and traffic.`;
+    }
+
+    const standardResponseTime = 7;  // Standard response time in minutes
+
+    const responseTimeByType = {};  // To store response times by report type
+
+    // Collect response times per type
+    reports.forEach((report) => {
+        const translatedType = translate(report.report_type);  // Translate type
+        const receivedTime = report.responder?.received_time?.seconds
+            ? new Date(report.responder.received_time.seconds * 1000)
+            : null;
+        const arrivalTime = report.responder?.arrival_time?.seconds
+            ? new Date(report.responder.arrival_time.seconds * 1000)
+            : null;
+
+        const responseTimeInMinutes =
+            receivedTime && arrivalTime
+                ? (arrivalTime - receivedTime) / 60000  // Calculate response time in minutes
+                : null;
+
+        if (responseTimeInMinutes !== null) {
+            if (!responseTimeByType[translatedType]) {
+                responseTimeByType[translatedType] = [];
+            }
+            responseTimeByType[translatedType].push(responseTimeInMinutes);  // Store response time
+        }
+    });
+
+    // Compute average response times by type
+    const responseTypeRows = Object.entries(responseTimeByType)
+      .map(([type, times]) => {
+          const averageTime = times.length 
+              ? (times.reduce((sum, time) => sum + time, 0) / times.length).toFixed(2) 
+              : "N/A";
+
+          const performanceStatus = averageTime !== "N/A" && parseFloat(averageTime) <= standardResponseTime
+              ? "On Time"  // Within standard response time
+              : "Delayed"; // Exceeds standard response time
+
+          return `
+              <tr>
+                  <td>${type}</td>
+                  <td style="text-align: right;">${averageTime} mins</td>
+                  <td style="text-align: center;">${performanceStatus}</td>
+              </tr>
+          `;
+      })
+      .join("");
+
+    // Final table
+    const responseTimeByTypeTable = `
+        <table>
+          <thead>
+              <tr>
+                  <th>Report Type</th>
+                  <th>Average Response Time</th>
+                  <th>Timeliness</th>
+              </tr>
+          </thead>
+          <tbody>
+              ${responseTypeRows}
+          </tbody>
+        </table>
+    `;
+
+    const averageTimes = Object.values(responseTimeByType).map((times) =>
+      times.length ? (times.reduce((sum, time) => sum + time, 0) / times.length) : null
+    );
+    
+    // Filter out any null values
+    const validAverageTimes = averageTimes.filter((time) => time !== null);
+    
+    const fastestAverageResponseTime = validAverageTimes.length 
+        ? Math.min(...validAverageTimes).toFixed(2) 
+        : "N/A";
+    
+    const slowestAverageResponseTime = validAverageTimes.length 
+        ? Math.max(...validAverageTimes).toFixed(2) 
+        : "N/A";
+
+    return `
+        <html>
+            <head>
+                <style>
+                    body {
+                      font-family: Arial, sans-serif;
+                      background-color: white;
+                      margin: 0mm 2mm 0mm 3mm;
+                      width: 297mm; /* Switch width and height for landscape */
+                      height: 210mm;
+                      padding: 40px;
+                      overflow: hidden;
+                      transform: scale(1.1, 1.1);
+                      transform-origin: left top;
+                    }
+                    .title-heading { 
+                      text-align: center; 
+                      color: black; 
+                      font-size: 36px; 
+                      margin: 0;
+                      padding: 12px;
+                      background-color: transparent;
+                    }
+                    .standard-heading { 
+                      text-align: center; 
+                      color: black; 
+                      font-size: 18px; 
+                      margin: 0;
+                      padding: 12px;
+                      background-color: transparent;
+                    }
+                    .highlighted-heading { 
+                      text-align: center; 
+                      color: white;
+                      background-color: #57b378;
+                      font-size: 18px;
+                      margin: 0;
+                      padding: 12px;
+                    }
+                    .error-heading {
+                      text-align: center; 
+                      color: white;
+                      background-color: #de4e55;
+                      font-size: 18px;
+                      margin: 0;
+                      padding: 12px;
+                    }
+                    p { 
+                      font-size: 18px; 
+                      margin: 0;
+                      padding: 5px;
+                    }
+                    p.error { 
+                      color: #de4e55;
+                      font-size: 18px;
+                      margin: 0;
+                      padding: 5px;
+                    }
+                    .right-align {
+                      text-align: right; 
+                    }
+                    .spacer {
+                      height: 20px;
+                      margin: 0; 
+                    }
+                    .contact-info {
+                      display: flex;
+                      justify-content: space-between;
+                    }
+                    .contact-info div {
+                      flex: 1;
+                      margin: 0;
+                      padding: 5px;
+                    }
+                    .checkbox {
+                      margin: 5px 0;
+                    }
+                    .table-container {
+                      display: flex;
+                      justify-content: space-between;
+                    }
+                    table {
+                      width: 100%;
+                      border-collapse: collapse;
+                      margin: 20px 0;
+                      color: black;
+                    }
+                    table th, table td {
+                      border: 1px solid black;
+                      padding: 8px;
+                      text-align: left;
+                    }
+                    table th {
+                      background-color: white;
+                      font-weight: bold;
+                      text-align: center;
+                    }
+                    table tr:nth-child(even) {
+                      background-color: #f9f9f9;
+                    }
+                    .page {
+                      page-break-after: always;
+                      width: 100%;
+                    }
+                    .page:last-child {
+                      page-break-after: auto;
+                    }
+                    @page { 
+                      size: A4 landscape;
+                      margin: 0mm 0mm 0mm 0mm; 
+                    }
+                    @media print {
+                      body {
+                        max-width: 100%;
+                        max-height: 50%;
+                        transform: scale(1.1);
+                        transform-origin: left top;
+                        margin: 0mm 10mm 0mm 2mm;
+                      }
+                      .page {
+                        page-break-after: always;
+                      }
+                    }
+                </style>
+            </head>
+            <body>
+
+              <!-- Page 1 -->
+              <div class="page">
+                <h1 class="title-heading">Monthly Report for ${monthYear}</h1>
+                <div class="spacer"></div>
+                <h1 class="highlighted-heading">I. EMERGENCY REPORTED</h1>
+                <div class="spacer"></div>
+                <p style="text-align: justify;">
+                  This table summarizes all reports recorded at ${amenity?.name} ${amenity?.description} for ${monthYear}. 
+                  It categorizes incidents by type, including ${handlegenerator(amenity?.type)?.map((key) => translate(key)).join(", ")}, with a detailed breakdown of counts, percentages, and graphical contributions.
+                </p>
+                  ${reportTypeTable}
+                <p style="text-align: justify;">
+                  Based on the data for ${amenity?.name} ${amenity?.description} during ${monthYear}, a total of ${totalReports} incidents were documented. 
+                  Of these, ${Object.values(reportTypeCounts).reduce((a, b) => a + b, 0)} (${((Object.values(reportTypeCounts).reduce((a, b) => a + b, 0) / totalReports) * 100).toFixed(2)}%) were categorized into the listed types.
+                  The most reported type was ${Object.entries(reportTypeCounts).sort((a, b) => b[1] - a[1])[0][0]}, with ${Object.entries(reportTypeCounts).sort((a, b) => b[1] - a[1])[0][1]} reports (${((Object.entries(reportTypeCounts).sort((a, b) => b[1] - a[1])[0][1] / totalReports) * 100).toFixed(2)}%). 
+                  Other notable types includes ${formattedNotableTypes}.
+                  ${
+                    unclassifiedCount > 0
+                      ? `This data underscores the need for focused responses, with ${unclassifiedCount} (${unclassifiedPercentage}%) remaining unclassified.`
+                      : ""
+                  }
+                </p>
+              </div>
+
+              <!-- Page 2 -->
+              <div class="page">
+                <div class="spacer"></div>
+                <h1 class="highlighted-heading">II. RESPONSE TIMES BY REPORT</h1>
+                <div class="spacer"></div>
+                <p style="text-align: justify;">
+                  This table highlights the top 5 most recent incidents and their respective response times, showing the interval from when dispatch information was received to the time of arrival at the scene.
+                  The ability of responding units to meet the standard response time of seven (7) minutes is reflected in the fastest, slowest, median, and average response times presented below.
+                </p>
+                  ${responseTimeTable}
+                <p style="text-align: justify;">
+                  The response table highlights the performance of response teams in attending to reported incidents. 
+                  ${responseSummary}
+                  The fastest recorded response time was ${fastestResponseTime} minutes, while the slowest was ${slowestResponseTime} minutes. 
+                  The median response time, providing a clear picture of typical performance, was ${medianResponseTime} minutes, with an average response time of ${averageResponseTime} minutes. 
+                  This data underscores the effectiveness of response units and highlights areas requiring improvement to ensure prompt emergency management.
+                </p>
+                <div class="spacer"></div>
+              </div>
+
+              <!-- Page 3 -->
+              <div class="page">
+                <div class="spacer"></div>
+                <h1 class="highlighted-heading">III. RESPONSE TIMES BY TYPE</h1>
+                <div class="spacer"></div>
+                <p style="text-align: justify;">
+                  This table categorizes incidents by type, including ${handlegenerator(amenity?.type)?.map((key) => translate(key)).join(", ")}, highlighting the average response time and efficiency of responses. Performance is evaluated against the standard response time of seven (7) minutes, indicating whether responses were timely or delayed for each incident category.
+                </p>
+                ${responseTimeByTypeTable}
+                <p style="text-align: justify;">
+                  The response time by type table provides a detailed view of response performance for each incident category. 
+                  The fastest average response time among incident types was ${fastestAverageResponseTime} minutes, while the slowest was ${slowestAverageResponseTime} minutes. 
+                  This breakdown highlights variations in response efficiency across different emergencies, emphasizing the importance of optimizing resource allocation and strategies for improved response times.
+                  Performance is evaluated against the standard seven (7) minutes response time to identify areas needing enhanced readiness and rapid deployment.
+                </p>
+              </div>
+            </body>
+        </html>
+    `;
+  };
+
+  const handleGen = async () => {
+    setViewOptions(false);
+  
+    const filteredReports = reports.filter((report) => {
+      const reportDateValue = report.report_date || report.incident_date;
+      let reportDate;
+  
+      if (reportDateValue && reportDateValue.seconds !== undefined) {
+        reportDate = new Date(reportDateValue.seconds * 1000); // Convert Firestore Timestamp to Date
+      } else if (typeof reportDateValue === 'string' || typeof reportDateValue === 'number') {
+        reportDate = new Date(reportDateValue);
+      } else {
+        console.warn("Skipping report with unrecognized date format:", report);
+        return false;
+      }
+  
+      if (isNaN(reportDate.getTime())) {
+        console.warn("Invalid date in report:", reportDateValue);
+        return false;
+      }
+  
+      const reportYear = reportDate.getFullYear();
+      const reportMonthIndex = reportDate.getMonth();
+  
+      if (isDateRange) {
+        const fromMonthIndex = months.indexOf(selectedFromMonth);
+        const toMonthIndex = months.indexOf(selectedToMonth);
+        if (fromMonthIndex === -1 || toMonthIndex === -1) {
+          console.warn("Invalid month range:", selectedFromMonth, selectedToMonth);
+          return false;
+        }
+        return (
+          reportYear === selectedYear &&
+          reportMonthIndex >= fromMonthIndex &&
+          reportMonthIndex <= toMonthIndex
+        );
+      } else {
+        const selectedMonthIndex = months.indexOf(selectedMonth);
+        if (selectedMonthIndex === -1) {
+          console.warn("Invalid selected month:", selectedMonth);
+          return false;
+        }
+        return reportYear === selectedYear && reportMonthIndex === selectedMonthIndex;
+      }
+    });
+  
+    // Early return if no matching reports
+    if (filteredReports.length === 0) {
+      alert('No reports found for the selected date range or month.');
+      return;
+    }
+  
+    setViewPDF(!viewPDF);
+    const htmlDoc = generateDoc(filteredReports, amenity);
+    setHtmlContent(htmlDoc);
+  };  
+
+  const print = async () => {
+    try {      
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+      });
+      const newFileName = `statistics_form.pdf`;
+      const newUri = FileSystem.documentDirectory + newFileName;
+      await FileSystem.moveAsync({ from: uri, to: newUri });
+      await Sharing.shareAsync(newUri);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Failed to generate PDF');
+    }
+  };
+
+  const reloadWeb = () => {
+    if (webViewRef.current) {
+      webViewRef.current.reload(); // Call the reload method
+      const htmlDoc = generateDoc(reports, amenity);
+      setHtmlContent(htmlDoc);
+    }
+  };
+
+  const selectFromMonth = (month) => {
+    setSelectedFromMonth(month);
+    setIsFromDropdownOpen(false);
+    // Reset "To" selection if it conflicts
+    if (selectedToMonth === month) {
+      setSelectedToMonth('Select Month');
+    }
+  };
+
+  const selectToMonth = (month) => {
+    setSelectedToMonth(month);
+    setIsToDropdownOpen(false);
+    // Reset "To" selection if it conflicts
+    if (selectedFromMonth === month) {
+      setSelectedFromMonth('Select Month');
+    }
+  };
+
+  const selectYear = (year) => {
+    setSelectedYear(year);
+    setIsYearOpen(false);
+  };
+
+  const selectMonth = (month) => {
+    setSelectedMonth(month);
+    setIsDropdownOpen(false);
+  };
+  
   return (
     <SafeAreaView className="w-full h-full overflow-hidden">
       <View className="w-full h-full bg-primary items-center">
-        <ScrollView contentContainerStyle={{height: height, width: width}} showsVerticalScrollIndicator={false}>
-          <View className="w-full bg-white" style={{ height: height, width: width }}>
+        {viewPDF && 
+          <View className="w-full h-[110%] bg-black/50 items-center justify-center absolute z-40 -top-[10%]">
+              <View className={`overflow-hidden bg-white`} style={{ width: width * 1.1, height: height * 0.69 }}>
+                  <WebView
+                      ref={webViewRef}
+                      originWhitelist={['*']}
+                      source={{ html: htmlContent }}
+                      style={{ flex: 1 }}
+                      scrollEnabled={true}
+                      scalesPageToFit={false}
+                      javaScriptEnabled={true}
+                      domStorageEnabled={true}
+                      injectedJavaScript={`
+                          document.body.style.zoom = "0.35";
+                          document.body.style.position = "relative";
+                          document.body.style.left = "50%";
+                          document.body.style.top = "24%";
+                          document.body.style.transform = "translate(-50%, -50%)";
+                          document.body.style.margin = "0";
+                          document.body.style.padding = "0";
+                          document.body.style.overflow = "hidden";
+                      `}
+                      androidHardwareAccelerationDisabled={false}
+                  />
+              </View>
+              <View className="w-[30%] h-[6%] absolute bottom-[5%] right-[2%] z-20 items-end justify-center">
+                  <TouchableHighlight className="w-full h-full bg-white px-4 py-1 rounded-2xl items-center justify-center" underlayColor={'#3b8a57'} onPress={print}>
+                      <Text className="text-base font-rbase text-primary">{'PRINT'}</Text>
+                  </TouchableHighlight>
+              </View>
+              <View className="w-[30%] h-[6%] absolute bottom-[5%] right-[35%] z-20 items-end justify-center">
+                  <TouchableHighlight className="w-full h-full bg-white px-4 py-1 rounded-2xl items-center justify-center" underlayColor={'#3b8a57'} onPress={reloadWeb}>
+                      <Text className="text-base font-rbase text-primary">{'RELOAD'}</Text>
+                  </TouchableHighlight>
+              </View>
+              <View className="w-[20%] h-[6%] absolute bottom-[5%] left-[2%] z-20 items-end justify-center">
+                  <TouchableHighlight className="w-full h-full bg-white px-4 py-1 rounded-2xl items-center justify-center" underlayColor={'#3b8a57'} onPress={() => setViewPDF(false)}>
+                      <Image 
+                          tintColor={"#57b378"}
+                          source={icons.close}
+                          className="w-[50%] h-[50%]"
+                          resizeMode='contain'
+                      />
+                  </TouchableHighlight>
+              </View>
+          </View>
+        }
+        {viewOptions && 
+          <View className="w-full h-full bg-black/50 items-center justify-center absolute z-40">
+            <View className={`w-[95%] ${isDateRange ? 'h-[27%]' : 'h-[23%]'} bg-white`}>
+              {isDateRange ? (
+                <>
+                  {/* From Dropdown */}
+                  <View className="w-full h-10 mt-2 flex-row justify-between">
+                    <View className="w-[20%] h-full justify-center pl-[3%]">
+                      <Text className="text-base text-black font-rbase">{'From:'}</Text>
+                    </View>
+                    <View className="w-[75%] h-full justify-center mr-[3%]">
+                      <View className="w-full h-[80%]">
+                        <TouchableOpacity 
+                          className="w-full h-full bg-white border-[1px] border-primary flex-row" 
+                          onPress={() => setIsFromDropdownOpen(!isFromDropdownOpen)}
+                        >
+                          <View className="w-[90%] h-full justify-center pl-3">
+                            <Text className="font-pregular text-sm text-primary-hidden">{selectedFromMonth === 'Select Month' ? 'Month' : selectedFromMonth}</Text> 
+                          </View>
+                          <View className="w-[10%] h-full items-end justify-center pr-3">
+                            <Image 
+                              tintColor='#94A3B8'
+                              source={!isFromDropdownOpen ? icons.arrowD : icons.arrowU}
+                              className="w-3 h-3"
+                              resizeMode='contain'
+                            />
+                          </View>
+                        </TouchableOpacity>
+                      </View>
+                      {isFromDropdownOpen && 
+                        <View className="w-full absolute top-10 z-40">
+                            <FlatList
+                              data={fromMonths}
+                              keyExtractor={(item, index) => index.toString()}
+                              renderItem={({ item }) => (
+                                <TouchableHighlight
+                                  underlayColor={'#fef08a'}
+                                  className="p-2 border-b-[1px] border-gray-400 bg-white"
+                                  onPress={() => selectFromMonth(item)}
+                                >
+                                  <Text className="font-pregular text-sm text-primary-hidden">{item}</Text>
+                                </TouchableHighlight>
+                              )}
+                            />
+                        </View>
+                      }
+                    </View>
+                  </View>
+                  {/* To Dropdown */}
+                  <View className="w-full h-10 mt-1 flex-row justify-between">
+                    <View className="w-[20%] h-full justify-center pl-[3%]">
+                      <Text className="text-base text-black font-rbase">{'To:'}</Text>
+                    </View>
+                    <View className="w-[75%] h-full justify-center mr-[3%]">
+                      <View className="w-full h-[80%]">
+                        <TouchableOpacity 
+                          className="w-full h-full bg-white border-[1px] border-primary flex-row" 
+                          onPress={() => setIsToDropdownOpen(!isToDropdownOpen)}
+                        >
+                          <View className="w-[90%] h-full justify-center pl-3">
+                            <Text className="font-pregular text-sm text-primary-hidden">{selectedToMonth === 'Select Month' ? 'Month' : selectedToMonth}</Text> 
+                          </View>
+                          <View className="w-[10%] h-full items-end justify-center pr-3">
+                            <Image 
+                              tintColor='#94A3B8'
+                              source={!isToDropdownOpen ? icons.arrowD : icons.arrowU}
+                              className="w-3 h-3"
+                              resizeMode='contain'
+                            />
+                          </View>
+                        </TouchableOpacity>
+                      </View>
+                      {isToDropdownOpen && 
+                        <View className="w-full absolute top-10 z-40">
+                            <FlatList
+                              data={toMonths}
+                              keyExtractor={(item, index) => index.toString()}
+                              renderItem={({ item }) => (
+                                <TouchableHighlight
+                                  underlayColor={'#fef08a'}
+                                  className="p-2 border-b-[1px] border-gray-400 bg-white"
+                                  onPress={() => selectToMonth(item)}
+                                >
+                                  <Text className="font-pregular text-sm text-primary-hidden">{item}</Text>
+                                </TouchableHighlight>
+                              )}
+                            />
+                        </View>
+                      }
+                    </View>
+                  </View>
+                </>
+              ) : (
+                <>
+                  {/* Month Dropdown */}
+                  <View className="w-full h-10 mt-2 flex-row justify-between">
+                    <View className="w-[20%] h-full justify-center pl-[3%]">
+                      <Text className="text-base text-black font-rbase">{'Month:'}</Text>
+                    </View>
+                    <View className="w-[75%] h-full justify-center mr-[3%]">
+                      <View className="w-full h-[80%]">
+                        <TouchableOpacity 
+                          className="w-full h-full bg-white border-[1px] border-primary flex-row" 
+                          onPress={() => setIsDropdownOpen(!isDropdownOpen)}
+                        >
+                          <View className="w-[90%] h-full justify-center pl-3">
+                            <Text className="font-pregular text-sm text-primary-hidden">{selectedMonth === 'Select Month' ? 'Month' : selectedMonth}</Text> 
+                          </View>
+                          <View className="w-[10%] h-full items-end justify-center pr-3">
+                            <Image 
+                              tintColor='#94A3B8'
+                              source={!isDropdownOpen ? icons.arrowD : icons.arrowU}
+                              className="w-3 h-3"
+                              resizeMode='contain'
+                            />
+                          </View>
+                        </TouchableOpacity>
+                      </View>
+                      {isDropdownOpen && 
+                        <View className="w-full absolute top-10 z-40">
+                            <FlatList
+                              data={fromMonths}
+                              keyExtractor={(item, index) => index.toString()}
+                              renderItem={({ item }) => (
+                                <TouchableHighlight
+                                  underlayColor={'#fef08a'}
+                                  className="p-2 border-b-[1px] border-gray-400 bg-white"
+                                  onPress={() => selectMonth(item)}
+                                >
+                                  <Text className="font-pregular text-sm text-primary-hidden">{item}</Text>
+                                </TouchableHighlight>
+                              )}
+                            />
+                        </View>
+                      }
+                    </View>
+                  </View>
+                </>
+              )}
+              {/* Other Selection */}
+              <View className="w-full h-10 mt-1 flex-row justify-end">
+                {/* Year Dropdown */}
+                <View className="w-[30%] h-full justify-center mr-[10%]">
+                  <View className="w-full h-[80%]">
+                      <TouchableOpacity 
+                        className="w-full h-full bg-white border-[1px] border-primary flex-row" 
+                        onPress={() => setIsYearOpen(!isYearOpen)}
+                      >
+                        <View className="w-[90%] h-full justify-center pl-3">
+                          <Text className="font-pregular text-sm text-primary-hidden">{selectedYear}</Text> 
+                        </View>
+                        <View className="w-[10%] h-full items-end justify-center pr-3">
+                          <Image 
+                            tintColor='#94A3B8'
+                            source={!isYearOpen ? icons.arrowD : icons.arrowU}
+                            className="w-3 h-3"
+                            resizeMode='contain'
+                          />
+                        </View>
+                      </TouchableOpacity>
+                  </View>
+                  {isYearOpen && 
+                    <View className="w-full absolute top-8 z-40 border-primary border-[1px]">
+                        <FlatList
+                          data={years}
+                          keyExtractor={(item, index) => index.toString()}
+                          renderItem={({ item }) => (
+                            <TouchableHighlight
+                              underlayColor={'#fef08a'}
+                              className="p-2 border-b-[1px] border-gray-400 bg-white"
+                              onPress={() => selectYear(item)}
+                            >
+                              <Text className="font-pregular text-sm text-primary-hidden">{item}</Text>
+                            </TouchableHighlight>
+                          )}
+                        />
+                    </View>
+                  }
+                </View>
+                {/* Range Option */}
+                <View className="w-[35%] h-full justify-center mr-[3%]">
+                  <View className="w-full h-[80%]">
+                      <TouchableOpacity 
+                        className={`w-full h-full ${!isDateRange ? 'bg-white border-[1px] border-primary' : 'bg-primary'} flex-row`} 
+                        onPress={() => setIsDateRange(!isDateRange)}
+                      >
+                        <View className="w-[90%] h-full justify-center pl-3">
+                          <Text className={`font-pregular text-sm ${!isDateRange ? 'text-primary-hidden' : 'text-white'}`}>{'Date Range'}</Text> 
+                        </View>
+                        <View className="w-[10%] h-full items-end justify-center pr-3">
+                          <Image 
+                            tintColor={isDateRange ? '#ffffff' : '#94A3B8'}
+                            source={isDateRange ? icons.check : icons.calendar}
+                            className="w-3 h-3"
+                            resizeMode='contain'
+                          />
+                        </View>
+                      </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+              {/* Generate Statistics */}
+              <View className="w-full h-10 mt-3 items-center justify-center">
+                <TouchableHighlight 
+                  className={`w-[60%] h-full ${isDateRange ? (selectedFromMonth && selectedToMonth === 'Select Month' ? 'bg-primary-hidden' : 'bg-primary') : (selectedMonth === 'Select Month' ? 'bg-primary-hidden' : 'bg-primary')} rounded-2xl items-center justify-center`}
+                  underlayColor={'#fef08a'} 
+                  onPress={handleGen} 
+                  disabled={isDateRange ? (selectedFromMonth && selectedToMonth === 'Select Month') : (selectedMonth === 'Select Month')}
+                >
+                  <View className="w-full h-full flex-row items-center justify-center">
+                    <Image 
+                      tintColor={"#ffffff"}
+                      source={icons.prints}
+                      className="w-[30%] h-[60%]"
+                      resizeMode='contain'
+                    />
+                    <Text className={`w-[70%] text-white font-rbase text-base`}>{'Generate Statistics'}</Text>
+                  </View>
+                </TouchableHighlight>
+              </View>
+            </View>
+          </View>
+        }
+        <ScrollView contentContainerStyle={{height: height * 1.02, width: width}} showsVerticalScrollIndicator={false}>
+          <View className="w-full bg-white" style={{ height: height * 1.02, width: width }}>
+            <View className="w-full h-10 absolute top-0 z-30 items-center justify-center">
+              <Text className="font-rbold text-white text-lg">{amenity ? `${amenity.name} ${amenity.description}` : ''}</Text>
+            </View>
             <View className="w-full bg-primary" style={{ height: '20%', width: width, zIndex: 10 }}/>
             {/* Service Selection Button */}
             <View className="w-full h-10 justify-center -top-[14%] items-center px-5 z-30">
@@ -443,11 +1374,22 @@ const StatisticsScreen = ({ changePage, backPage }) => {
                   </TouchableHighlight>
               </ScrollView>
             </View>
+            {/* Print Button */}
+            <View className="w-24 h-12 absolute top-[45%] right-[5%] z-40 items-center justify-center">
+                <TouchableHighlight className="w-full h-full bg-white border-[1px] border-primary rounded-2xl items-center justify-center" underlayColor={'#fef08a'} onPress={() => setViewOptions(true)}>
+                  <Image 
+                    tintColor={"#57b378"}
+                    source={icons.prints}
+                    className="w-[60%] h-[60%]"
+                    resizeMode='contain'
+                  />
+                </TouchableHighlight>
+            </View>
             {serviceMode === 'reports' ? (
               <>
                 <View className="w-full -top-[12%] items-center justify-center z-10">
                   {/* Reports Statistics */}
-                  <View className="bg-white items-center shadow-lg shadow-black-200">
+                  <View className="bg-white items-center shadow-lg shadow-black-100 pb-3">
                     <View className="py-[5%] flex-row gap-x-[95px] justify-center">
                       <Text className="font-psemibold text-primary text-base left-[90%]">Report Statistics</Text>
                       {/* Filters */}
@@ -663,7 +1605,7 @@ const StatisticsScreen = ({ changePage, backPage }) => {
               <>
                 <View className="w-full -top-[12%] items-center justify-center z-10">
                 {/* Reports Statistics */}
-                <View className="bg-white items-center shadow-lg shadow-black-200">
+                <View className="bg-white items-center shadow-lg shadow-black-100 pb-3">
                   <View className="py-[5%] flex-row gap-x-[95px] justify-center">
                     <Text className="font-psemibold text-primary text-base left-[90%]">{"Report Statistics"}</Text>
                     {/* Filters */}
@@ -859,7 +1801,7 @@ const StatisticsScreen = ({ changePage, backPage }) => {
               <>
                 <View className="w-full -top-[12%] items-center justify-center z-10">
                 {/* Respond Time Statistics */}
-                <View className="bg-white items-center shadow-lg shadow-black-200">
+                <View className="bg-white items-center shadow-lg shadow-black-100 pb-3">
                   <View className="py-[5%] flex-row gap-x-[95px] justify-center">
                     <Text className="font-psemibold text-primary text-base left-[90%]">{"Response Statistics"}</Text>
                     {/* Filters */}
@@ -903,7 +1845,6 @@ const StatisticsScreen = ({ changePage, backPage }) => {
                       }}
                       width={width - 40} // Adjust width to fit the screen
                       height={220}
-                      yAxisSuffix="M" // No suffix needed, but this can be modified if necessary
                       yAxisInterval={1}
                       chartConfig={{
                         backgroundColor: '#ffffff',
@@ -1123,7 +2064,7 @@ const StatisticsScreen = ({ changePage, backPage }) => {
               <>
                 <View className="w-full -top-[12%] items-center justify-center z-10">
                 {/* Arrival Time Statistics */}
-                <View className="bg-white items-center shadow-lg shadow-black-200">
+                <View className="bg-white items-center shadow-lg shadow-black-100 pb-3">
                   <View className="py-[5%] flex-row gap-x-[95px] justify-center">
                     <Text className="font-psemibold text-primary text-base left-[90%]">{"Arrival Statistics"}</Text>
                     {/* Filters */}
@@ -1167,7 +2108,6 @@ const StatisticsScreen = ({ changePage, backPage }) => {
                       }}
                       width={width - 40} // Adjust width to fit the screen
                       height={220}
-                      yAxisSuffix="M" // No suffix needed, but this can be modified if necessary
                       yAxisInterval={1}
                       chartConfig={{
                         backgroundColor: '#ffffff',
@@ -1325,68 +2265,72 @@ const StatisticsScreen = ({ changePage, backPage }) => {
                         <Text className="font-psemibold text-primary text-lg py-5">
                           {'SHORTEST\nArrival Time'}
                         </Text>
-                        <View className="w-[90%] h-[145px] bg-primary px-4 justify-center">
-                          {lowArriveTime !== null && (
-                            <>
-                              <View className="z-10 absolute -top-3 right-0 px-2 border-[1px] bg-primary border-white rounded-2xl">
-                                <Text className="text-base font-pregular text-white">
-                                    {`${lowArriveDistance} km`}
+                        <TouchableOpacity className="w-full" onPress={() => console.log(lowArriveID)}>
+                          <View className="w-[90%] h-[145px] bg-primary px-4 justify-center">
+                            {lowArriveTime !== null && (
+                              <>
+                                <View className="z-10 absolute -top-3 right-0 px-2 border-[1px] bg-primary border-white rounded-2xl">
+                                  <Text className="text-base font-pregular text-white">
+                                      {`${lowArriveDistance} km`}
+                                  </Text>
+                                </View>
+                                <Text className="font-pblack text-white text-5xl pt-3 text-center">
+                                  {lowArriveTime >= 3600
+                                    ? `${(lowArriveTime / 3600).toFixed(2)}`
+                                    : lowArriveTime >= 60
+                                    ? `${(lowArriveTime / 60).toFixed(2)}`
+                                    : `${lowArriveTime.toFixed(2)}`}
                                 </Text>
-                              </View>
-                              <Text className="font-pblack text-white text-5xl pt-3 text-center">
-                                {lowArriveTime >= 3600
-                                  ? `${(lowArriveTime / 3600).toFixed(2)}`
-                                  : lowArriveTime >= 60
-                                  ? `${(lowArriveTime / 60).toFixed(2)}`
-                                  : `${lowArriveTime.toFixed(2)}`}
-                              </Text>
-                              <Text className="font-pregular text-white text-xs text-center">
-                                {lowArriveTime >= 60
-                                  ? `Hour(s)`
-                                  : lowArriveTime >= 1
-                                  ? `Minute(s)`
-                                  : `Second(s)`}
-                              </Text>
-                            </>
-                          )}
-                          <Text className="font-pmedium text-white text-sm text-center">
-                            {translate(filterWeekRange)}
-                          </Text>
-                        </View>
+                                <Text className="font-pregular text-white text-xs text-center">
+                                  {lowArriveTime >= 60
+                                    ? `Hour(s)`
+                                    : lowArriveTime >= 1
+                                    ? `Minute(s)`
+                                    : `Second(s)`}
+                                </Text>
+                              </>
+                            )}
+                            <Text className="font-pmedium text-white text-sm text-center">
+                              {translate(filterWeekRange)}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
                       </View>
                       {/* Longest Arrival Time */}
                       <View className="w-[52%]">
                         <Text className="font-psemibold text-primary text-lg py-5">
                           {'LONGEST\nArrival Time'}
                         </Text>
-                        <View className="w-[90%] h-[145px] bg-primary px-4 justify-center">
-                          {highArriveTime !== null && (
-                            <>
-                              <View className="z-10 absolute -top-3 right-0 px-2 border-[1px] bg-primary border-white rounded-2xl">
-                                <Text className="text-base font-pregular text-white">
-                                    {`${highArriveDistance} km`}
+                        <TouchableOpacity className="w-full" onPress={() => console.log(highArriveID)}>
+                          <View className="w-[90%] h-[145px] bg-primary px-4 justify-center">
+                            {highArriveTime !== null && (
+                              <>
+                                <View className="z-10 absolute -top-3 right-0 px-2 border-[1px] bg-primary border-white rounded-2xl">
+                                  <Text className="text-base font-pregular text-white">
+                                      {`${highArriveDistance} km`}
+                                  </Text>
+                                </View>
+                                <Text className="font-pblack text-white text-5xl pt-3 text-center">
+                                  {highArriveTime >= 3600
+                                    ? `${(highArriveTime / 3600).toFixed(2)}`
+                                    : highArriveTime >= 60
+                                    ? `${(highArriveTime / 60).toFixed(2)}`
+                                    : `${highArriveTime.toFixed(2)}`}
                                 </Text>
-                              </View>
-                              <Text className="font-pblack text-white text-5xl pt-3 text-center">
-                                {highArriveTime >= 3600
-                                  ? `${(highArriveTime / 3600).toFixed(2)}`
-                                  : highArriveTime >= 60
-                                  ? `${(highArriveTime / 60).toFixed(2)}`
-                                  : `${highArriveTime.toFixed(2)}`}
-                              </Text>
-                              <Text className="font-pregular text-white text-xs text-center" numberOfLines={2} ellipsizeMode="tail">
-                                {highArriveTime >= 60
-                                  ? `Hour(s)`
-                                  : highArriveTime >= 1
-                                  ? `Minute(s)`
-                                  : `Second(s)`}
-                              </Text>
-                            </>
-                          )}
-                          <Text className="font-pmedium text-white text-sm text-center">
-                            {translate(filterWeekRange)}
-                          </Text>
-                        </View>
+                                <Text className="font-pregular text-white text-xs text-center" numberOfLines={2} ellipsizeMode="tail">
+                                  {highArriveTime >= 60
+                                    ? `Hour(s)`
+                                    : highArriveTime >= 1
+                                    ? `Minute(s)`
+                                    : `Second(s)`}
+                                </Text>
+                              </>
+                            )}
+                            <Text className="font-pmedium text-white text-sm text-center">
+                              {translate(filterWeekRange)}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
                       </View>
                     </View>
                   </View>
