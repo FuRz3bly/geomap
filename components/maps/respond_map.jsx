@@ -5,7 +5,7 @@ import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications'
 import { getDistance, getPreciseDistance } from 'geolib';
 import { router } from 'expo-router';
-import { collection, onSnapshot, doc, getDoc, updateDoc, arrayUnion, GeoPoint } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc, getDocs, writeBatch, where, query, updateDoc, arrayUnion, GeoPoint } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 
 import UserContext from '../UserContext';
@@ -210,7 +210,7 @@ const RespondMap = forwardRef((
                     { duration: 1000 }
                 );
             } else {
-                console.warn('Invalid userAmenity location, skipping animateCamera');
+                console.log('Invalid amenity location, skipping animateCamera');
             }
         }, 2000);
       }
@@ -482,6 +482,27 @@ const RespondMap = forwardRef((
               report_status: 'received',
               responder: responderDetails,
             });
+
+            // Update attached reports
+            const attachedReportsQuery = query(
+              collection(db, 'reports'),
+              where('attached', '==', selectReport.report_id)
+            );
+            const attachedReportsSnapshot = await getDocs(attachedReportsQuery);
+
+            if (!attachedReportsSnapshot.empty) {
+              const batch = writeBatch(db);
+              attachedReportsSnapshot.forEach((docSnapshot) => {
+                const attachedReportRef = doc(db, 'reports', docSnapshot.id);
+                batch.update(attachedReportRef, {
+                  report_status: 'received',
+                  attached_location: selectReport.report_location,
+                  responder: responderDetails,
+                });
+              });
+  
+              await batch.commit(); // Commit all batched updates
+            }
   
             // Log for debugging
             console.log('Respo to Report ID:', selectReport.report_id);
@@ -602,6 +623,26 @@ const RespondMap = forwardRef((
         report_status: 'responded',
         responder: updatedResponder
       });
+
+      // Update attached reports
+      const attachedReportsQuery = query(
+        collection(db, 'reports'),
+        where('attached', '==', respondReport.report_id)
+      );
+      const attachedReportsSnapshot = await getDocs(attachedReportsQuery);
+
+      if (!attachedReportsSnapshot.empty) {
+        const batch = writeBatch(db);
+        attachedReportsSnapshot.forEach((docSnapshot) => {
+          const attachedReportRef = doc(db, 'reports', docSnapshot.id);
+          batch.update(attachedReportRef, {
+            report_status: 'responded',
+            responder: updatedResponder
+          });
+        });
+
+        await batch.commit(); // Commit all batched updates
+      }
   
       setRespondReport(null); // Clear the respond report state
     } catch (error) {
@@ -912,7 +953,6 @@ const RespondMap = forwardRef((
   };
 
   const updateRespoRoute = async () => {
-    //console.log(respondReport);
     try {
       if (!respondReport || !respondReport.report_id) {
         throw new Error("respondReport or respondReport.report_id is not defined");
@@ -944,12 +984,33 @@ const RespondMap = forwardRef((
         'responder.route_time.eta': etaMinutes, // Add ETA in minutes
       };
   
+      // Update the primary report
       await updateDoc(reportRef, updatedFields);
-      console.log('Responder location, route coordinates, and ETA updated:', updatedFields);
+      console.log('Primary report updated:', updatedFields);
+  
+      // Handle attached reports
+      const attachedReportsQuery = query(
+        collection(db, 'reports'),
+        where('attached', '==', respondReport.report_id)
+      );
+      const attachedReportsSnapshot = await getDocs(attachedReportsQuery);
+  
+      if (!attachedReportsSnapshot.empty) {
+        const batch = writeBatch(db);
+        attachedReportsSnapshot.forEach((docSnapshot) => {
+          const attachedReportRef = doc(db, 'reports', docSnapshot.id);
+          batch.update(attachedReportRef, updatedFields); // Apply the same updates to attached reports
+        });
+  
+        await batch.commit(); // Commit all batched updates
+        console.log('Attached reports updated:', attachedReportsSnapshot.docs.map((doc) => doc.id));
+      } else {
+        console.log('No attached reports found for this report.');
+      }
     } catch (error) {
-      console.error('Error updating responder location and ETA:', error);
+      console.error('Error updating responder location, route, and ETA:', error);
     }
-  };
+  };  
 
   const reRoute = async () => {
     if (!responderLocation || !respondReport) {

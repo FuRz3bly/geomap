@@ -194,7 +194,7 @@ const Register = () => {
   };
 
   const handleRegisterPress = async () => {
-    const { email, password, confirmPass, username, firstName, middleName, lastName, address, phoneNumber, birthdate } = userForm;
+    const { email, password, confirmPass, username, firstName, middleName, lastName, address, phoneNumber, birthdate, photoID } = userForm;
   
     // Step 1: Check for missing fields
     const missingFields = [];
@@ -220,6 +220,13 @@ const Register = () => {
       setFailedForm({ title: 'Password Mismatch!', description: `Passwords do not match,\nplease try again.` });
       setFailedVisible(true);
       setRegisterReq(['password', 'confirmPass']);
+      return;
+    }
+
+    if (!photoID)  {
+      setFailedForm({ title: 'Missing ID!', description: `Please upload your ID to\ncontinue with the registration.` });
+      setFailedVisible(true);
+      setRegisterReq(['photoID']);
       return;
     }
   
@@ -387,7 +394,7 @@ const Register = () => {
                     />
                     <View className="w-[10%] h-full items-end justify-center">
                         <Image 
-                            tintColor={"#57b378"}
+                            tintColor={userForm.photoID ? "#57b378" : (registerReq.includes('photoID') ? "#e11d47" : "#57b378")}
                             source={icons.editing}
                             className="w-[70%] h-[70%]"
                             resizeMode='contain'

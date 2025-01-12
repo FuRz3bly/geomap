@@ -254,6 +254,7 @@ import turnBack from "../assets/icons/turn-back.png";
 import assist from "../assets/icons/assist.png";
 import electric from "../assets/icons/electric.png";
 import noNetwork from "../assets/icons/no-network.png";
+import nearbyReport from "../assets/icons/nearby-report.png";
 
 export default {
   logo,
@@ -479,5 +480,6 @@ export default {
   turnBack,
   assist,
   electric,
-  noNetwork
+  noNetwork,
+  nearbyReport
 };

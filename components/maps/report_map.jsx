@@ -27,6 +27,7 @@ Notifications.setNotificationHandler({
 const ReportMap = forwardRef((props, ref) => {
   const {
     mapStatus,
+    pageSwitch,
     mapWarn,
     loadingMsg,
     successMsg,
@@ -92,9 +93,12 @@ const ReportMap = forwardRef((props, ref) => {
   const [mapTheme, setMapTheme] = useState(default_theme);
   const [receiveReport, setReceiveReport] = useState(null); // Received Report Container
   const [responderAmenity, setResponderAmenity] = useState([]); // Responder Amenity Container
+  const [attachedLocation, setAttachedLocation] = useState({ latitude: 0, longitude: 0 });
   const [responderLocation, setResponderLocation] = useState({ latitude: 0, longitude: 0 });
   const [responseReport, setResponseReport] = useState(null); // Response Report Container
   const [responderRoute, setResponderRoute] = useState([]); // Current Route of Responder
+  const [recentNearbyReports, setRecentNearbyReports] = useState([]);
+  const [newestReport, setNewestReport] = useState(null);
 
   // Fetching Location Function
   const fetchLocation = useCallback(async () => {
@@ -350,6 +354,9 @@ const ReportMap = forwardRef((props, ref) => {
           isReceive(true);
           setResponderRoute(receivedReport.responder.route_coordinates);
           setResponderLocation(receivedReport.responder.responder_location);
+          if (receiveReport?.attached_location) {
+            setAttachedLocation(receiveReport.attached_location);
+          }
         } else if (respondedReport) {
           handleReport(respondedReport, false);
           setReceiveReport(null);
@@ -370,6 +377,106 @@ const ReportMap = forwardRef((props, ref) => {
     
     return () => unsubscribe();
   }, [user, location]);
+
+  {/* Detect Nearby Reports and Attached the new report */}
+  useEffect(() => {
+    if (user && allReports && !alertShown) {
+      const today = new Date();
+      const todayYear = today.getFullYear();
+      const todayMonth = today.getMonth();
+      const todayDate = today.getDate();
+  
+      // Filter reports created today
+      const reportsToday = allReports.filter(report => {
+        const reportDate = new Date(
+          report.report_date?.seconds * 1000 || report.incident_date?.seconds * 1000
+        );
+        return (
+          reportDate.getFullYear() === todayYear &&
+          reportDate.getMonth() === todayMonth &&
+          reportDate.getDate() === todayDate
+        );
+      });
+  
+      // Filter reports by the current user
+      const userReports = reportsToday.filter(report => report.user_report.user_id === user.user_id);
+      if (userReports.length === 0) return;
+  
+      // Get the most recent report by the user
+      const newestReport = userReports.reduce((latest, current) => {
+        const latestDate = new Date(
+          latest.report_date?.seconds * 1000 || latest.incident_date?.seconds * 1000
+        );
+        const currentDate = new Date(
+          current.report_date?.seconds * 1000 || current.incident_date?.seconds * 1000
+        );
+        return currentDate > latestDate ? current : latest;
+      });
+  
+      // Check if this report is the newest report today overall
+      const newestOverallReport = reportsToday.reduce((latest, current) => {
+        const latestDate = new Date(
+          latest.report_date?.seconds * 1000 || latest.incident_date?.seconds * 1000
+        );
+        const currentDate = new Date(
+          current.report_date?.seconds * 1000 || current.incident_date?.seconds * 1000
+        );
+        return currentDate > latestDate ? current : latest;
+      });
+  
+      // Only proceed if the user's newest report is also the newest report today
+      if (newestReport.report_id !== newestOverallReport.report_id) return;
+  
+      const reportType = newestReport.report_type;
+      const reportLocation = newestReport.report_location;
+  
+      // Skip alert if the report is already attached
+      if (newestReport.attached) {
+        console.log(`Report ${newestReport.report_id} is already attached to ${newestReport.attached}`);
+        return;
+      }
+  
+      // Find nearby reports of the same type
+      const recentNearbyReports = reportsToday.filter(report => {
+        const distance = location
+          ? getPreciseDistance(
+              { latitude: reportLocation.latitude, longitude: reportLocation.longitude },
+              { latitude: report.report_location.latitude, longitude: report.report_location.longitude }
+            )
+          : Infinity;
+        return (
+          report.report_type.trim().toLowerCase() === reportType.trim().toLowerCase() &&
+          distance < 1000 &&
+          report.report_id !== newestReport.report_id
+        );
+      });
+  
+      // Show alert if there are similar nearby reports
+      if (recentNearbyReports.length > 0) {
+        Alert.alert(
+          `Similar Emergency ${recentNearbyReports.length === 1 ? 'Report' : 'Reports'} Found`,
+          `There ${recentNearbyReports.length === 1 ? 'is' : 'are'} ${recentNearbyReports.length} similar case${recentNearbyReports.length === 1 ? '' : 's'} of type "${translate(reportType)}" reported nearby your latest report today.`,
+          [
+            {
+              text: 'Details',
+              onPress: () => handleDetails(recentNearbyReports[0].report_id),
+            },
+            {
+              text: 'Link',
+              onPress: () => handleAttach(newestReport, recentNearbyReports[0].report_id),
+            },
+            {
+              text: 'Dismiss',
+              onPress: () => console.log('Alert closed'),
+              style: 'cancel',
+            },
+          ],
+          { cancelable: true }
+        );
+        setAlertShown(true); // Set alert shown to true after displaying
+      }
+    }
+  }, [user, location, allReports, alertShown]);  
 
   // If Searching Query on Amenities or All
   useEffect(() => {
@@ -768,6 +875,43 @@ const ReportMap = forwardRef((props, ref) => {
     }
   };
 
+  const handleDetails = (id) => {
+    containID(id);
+    pageSwitch('home/details');
+    mapStatus('loading');
+    loadingMsg('LOADING DATA');
+  };
+
+  const handleAttach = async (newestReport, nearbyReportId) => {
+    if (newestReport) {
+      try {
+        const reportRef = doc(db, 'reports', newestReport.report_id);
+        await updateDoc(reportRef, { attached: nearbyReportId });
+        console.log(`Attached nearby report ${nearbyReportId} to ${newestReport.report_id}`);
+  
+        // Show an alert to inform the user
+        Alert.alert(
+          'Report Linked Successfully',
+          `Your report has been linked with the report (ID: ${nearbyReportId}).\n\nThis means your report will now also be used as part of the evidence for this case.`,
+          [
+            { text: 'OK', onPress: () => console.log('User acknowledged the report link') },
+          ],
+          { cancelable: true }
+        );
+      } catch (error) {
+        console.error("Error attaching report:", error);
+        Alert.alert(
+          'Error Linking Report',
+          'An error occurred while linking your report. Please try again later.',
+          [
+            { text: 'OK', onPress: () => console.log('User acknowledged the error') },
+          ],
+          { cancelable: true }
+        );
+      }
+    }
+  };
+
   useImperativeHandle(ref, () => ({
     handleCompass: () => {
       if (mapRef.current) {
@@ -881,7 +1025,7 @@ const ReportMap = forwardRef((props, ref) => {
             onPress={() => handleReportMarker(report)}
           />
         ))}
-        {reportMarkerVisible && [].concat(receiveReport || [], responseReport || []).map((report, index) => (
+        {/* {reportMarkerVisible && [].concat(receiveReport || [], responseReport || []).map((report, index) => (
             <Marker
               key={`${index}-${markerKey}`}
               coordinate={{
@@ -900,6 +1044,49 @@ const ReportMap = forwardRef((props, ref) => {
               }
               onPress={() => handleReportMarker(report)}
             />
+        ))} */}
+        {reportMarkerVisible && [].concat(receiveReport || [], responseReport || []).map((report, index) => (
+          <React.Fragment key={`${index}-${markerKey}`}>
+            {/* Marker for report_location */}
+            <Marker
+              coordinate={{
+                latitude: report.report_location.latitude,
+                longitude: report.report_location.longitude,
+              }}
+              tracksViewChanges={tracksViewChanges}
+              image={
+                report.report_status === 'received' ? 
+                (selectReport?.report_id === report.report_id ? require('../../assets/icons/report-received-marker-select.png') : require('../../assets/icons/report-received-marker.png'))
+                  : report.report_status === 'responded' ? 
+                (selectReport?.report_id === report.report_id ? require('../../assets/icons/report-responded-marker-select.png') : require('../../assets/icons/report-responded-marker.png'))
+                  : report.report_status === 'resolved' ? 
+                (selectReport?.report_id === report.report_id ? require('../../assets/icons/report-resolved-marker-select.png') : require('../../assets/icons/report-resolved-marker.png'))
+                  : (selectReport?.report_id === report.report_id ? require('../../assets/icons/report-waiting-marker-select.png') : require('../../assets/icons/report-waiting-marker.png')) // default icon
+              }
+              onPress={() => handleReportMarker(report)}
+            />
+
+            {/* Marker for attached_location (only if it exists) */}
+            {report.attached_location && (
+              <Marker
+                coordinate={{
+                  latitude: report.attached_location.latitude,
+                  longitude: report.attached_location.longitude,
+                }}
+                tracksViewChanges={tracksViewChanges}
+                image={
+                  report.report_status === 'received' ? 
+                  (selectReport?.report_id === report.report_id ? require('../../assets/icons/report-received-marker-select.png') : require('../../assets/icons/report-received-marker.png'))
+                    : report.report_status === 'responded' ? 
+                  (selectReport?.report_id === report.report_id ? require('../../assets/icons/report-responded-marker-select.png') : require('../../assets/icons/report-responded-marker.png'))
+                    : report.report_status === 'resolved' ? 
+                  (selectReport?.report_id === report.report_id ? require('../../assets/icons/report-resolved-marker-select.png') : require('../../assets/icons/report-resolved-marker.png'))
+                    : (selectReport?.report_id === report.report_id ? require('../../assets/icons/report-waiting-marker-select.png') : require('../../assets/icons/report-waiting-marker.png')) // default icon
+                }
+                onPress={() => handleReportMarker(report)}
+              />
+            )}
+          </React.Fragment>
         ))}
         {receiveReport && responderLocation && (
           <Marker

@@ -1641,6 +1641,7 @@ const MapScreen = (
                 isResponded={setResponded}
                 isReceive={setReceived}
                 receiver={setReceivedReport}
+                pageSwitch={changePage}
               />
             )}
           </>

@@ -379,7 +379,12 @@ const HomeScreen = () => {
                     filteredRequests = requests.filter(request => request.amenity_id === amenityID);
                 }
                 const newestRequestTimestamp = filteredRequests.reduce((latest, request) => {
-                    return request.createdAt.seconds > latest.seconds ? request.createdAt : latest;
+                    const createdAt = request.createdAt;
+                    // Check if createdAt exists and has a `seconds` property
+                    if (createdAt && createdAt.seconds !== undefined) {
+                        return createdAt.seconds > latest.seconds ? createdAt : latest;
+                    }
+                    return latest; // Return the current latest if createdAt is invalid
                 }, filteredRequests[0]?.createdAt || { seconds: 0 });
 
                 const chartData = prepareChartData(filteredRequests);
@@ -515,7 +520,7 @@ const HomeScreen = () => {
                 stopNotificationSound(); // Ensure sound is stopped if the component unmounts
             };
         }
-    }, [userAmenity, isResponder, isDuty]);    
+    }, [userAmenity, isResponder, isDuty]);
 
     useEffect(() => {
         // Initialize expanded states for new sorted reports

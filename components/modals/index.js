@@ -11,6 +11,7 @@ import Response from "./reports/response";
 import Arrival from "./reports/arrival";
 import Resolved from "./reports/resolved";
 import Pins from "./reports/pin";
+import Nearby from "./reports/nearby";
 import Reporting from "./tutorial/reporting";
 import Exploring from "./tutorial/exploring";
 import Applying from "./tutorial/applying";
@@ -29,6 +30,7 @@ export {
     Arrival,
     Resolved,
     Pins,
+    Nearby,
     Reporting,
     Exploring,
     Applying

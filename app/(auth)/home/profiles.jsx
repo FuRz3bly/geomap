@@ -14,7 +14,7 @@ import { WebView } from 'react-native-webview';
 
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updateEmail } from 'firebase/auth';
 import { getStorage, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { getFirestore, updateDoc, doc, getDoc, addDoc, getDocs, onSnapshot, collection, arrayUnion, query, where } from 'firebase/firestore';
+import { getFirestore, updateDoc, doc, getDoc, addDoc, getDocs, onSnapshot, collection, arrayUnion, query, where, Timestamp } from 'firebase/firestore';
 import { storage, auth, db } from '../../../firebaseConfig'; 
 
 import UserContext from '../../../components/UserContext';
@@ -348,53 +348,59 @@ const ProfileScreen = ({ changePage, backPage }) => {
 
     const registerResponder = async () => {
         const db = getFirestore();
-    const storage = getStorage();
-
-    try {
-        const updatedUserId = userForm.user_id.replace(/^1/, '2'); // Replace starting '1' with '2'
-        const updatedUsername = `${userForm.username}@respo`;
-        const amenityID = selectedAmenity?.id;
-        const { address, birthdate, full_name, phone_number, rank, newEmail, email, password } = userForm;
-
-        // Upload photo_id if it exists and get the download URL
-        let photoURL = null;
-        if (photoIDURI) {
-            const photoRef = ref(storage, `users/${updatedUserId}/id`);
-            try {
-                const response = await fetch(photoIDURI);
-                if (!response.ok) throw new Error('Network response was not ok');
-                const blob = await response.blob();
-                await uploadBytes(photoRef, blob);
-                photoURL = await getDownloadURL(photoRef);
-            } catch (fetchError) {
-                console.error('Error fetching photo ID:', fetchError);
-                throw fetchError;
+        const storage = getStorage();
+    
+        try {
+            const updatedUserId = userForm.user_id.replace(/^1/, '2'); // Replace starting '1' with '2'
+            const updatedUsername = `${userForm.username}@respo`;
+            const amenityID = selectedAmenity?.id;
+            const { address, birthdate, full_name, phone_number, rank, newEmail, email, photo_id } = userForm;
+    
+            // Upload photo_id if it exists and get the download URL
+            let photoURL = photo_id || null;
+            
+            if (!photoURL && photoIDURI) {
+                const photoRef = ref(storage, `users/${updatedUserId}/id`);
+                try {
+                    const response = await fetch(photoIDURI);
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    const blob = await response.blob();
+                    await uploadBytes(photoRef, blob);
+                    photoURL = await getDownloadURL(photoRef);
+                } catch (fetchError) {
+                    console.error('Error fetching photo ID:', fetchError);
+                    throw fetchError;
+                }
             }
-        }
-
-        // Create a request document in the "requests" collection
-        await addDoc(collection(db, 'request'), {
-            type: 'responder',
-            user_id: updatedUserId,
-            username: updatedUsername,
-            address,
-            birthdate,
-            full_name,
-            phone_number,
-            rank,
-            photo_id: photoURL,
-            amenity_id: amenityID,
-            amenity_key: null,
-            on_duty: false,
-            email: newEmail || email, // use newEmail if it's present
-            status: 'pending', // Add a status field to track request state
-            createdAt: new Date(),
-            user_uid: userForm.uid // Keep reference to the user ID
-        });
-
-        setApplyRespo(false);
-        console.log('Responder request created successfully.');
-
+    
+            // Create a request document and get its reference
+            const requestDocRef = await addDoc(collection(db, 'request'), {
+                type: 'responder',
+                user_id: updatedUserId,
+                username: updatedUsername,
+                address,
+                birthdate,
+                full_name,
+                phone_number,
+                rank,
+                photo_id: photoURL,
+                amenity_id: amenityID,
+                amenity_key: null,
+                on_duty: false,
+                email: newEmail || email, // Use newEmail if it's present
+                status: 'pending',
+                created_at: Timestamp.now(),
+                user_uid: userForm.uid // Reference to the user ID
+            });
+    
+            const requestId = requestDocRef.id; // Get the generated request_id
+    
+            // Update the request document with the request_id
+            await updateDoc(requestDocRef, { request_id: requestId });
+    
+            setApplyRespo(false);
+            console.log('Responder request created successfully with ID:', requestId);
+    
         } catch (error) {
             console.error('Error creating responder request:', error);
         }
@@ -1217,8 +1223,8 @@ const ProfileScreen = ({ changePage, backPage }) => {
                         <View className="w-[20%] items-center justify-center h-full">
                             <TouchableHighlight 
                                 underlayColor={'#3b8a57'} 
-                                className={`w-[60%] h-[60%] items-center justify-center ${!userForm.email || !userForm.rank || !photoIDURI || !selectedAmenity ? 'bg-primary-hidden' : 'bg-primary'} rounded-full`}
-                                disabled={!userForm.email || !userForm.rank || !photoIDURI || !selectedAmenity}
+                                className={`w-[60%] h-[60%] items-center justify-center ${!userForm.email || !userForm.rank || !userForm.photo_id || !selectedAmenity ? 'bg-primary-hidden' : 'bg-primary'} rounded-full`}
+                                disabled={!userForm.email || !userForm.rank || !userForm.photo_id || !selectedAmenity}
                                 onPress={registerResponder}
                             >
                                 <Image 
